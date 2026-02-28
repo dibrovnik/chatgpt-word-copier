@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT → Word Copier",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Копирование ответов ChatGPT с формулами, таблицами и форматированием для вставки в MS Word. Экспорт в DOCX и PDF.",
   "permissions": [
     "activeTab",
