@@ -81,6 +81,7 @@ export function generatePdfViaPrint(messageEl) {
   }
 
   const katexStylesHtml = getKatexStyles();
+  const allPageStyles = extractPageStyles();
 
   printWindow.document.write(
     '<!DOCTYPE html>' +
@@ -122,12 +123,13 @@ export function generatePdfViaPrint(messageEl) {
     '@media print { .pdf-toolbar { display: none !important; } .pdf-content { padding: 0; max-width: 100%; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' +
     '</style>' +
     katexStylesHtml +
+    allPageStyles +
     '</head>' +
     '<body>' +
     '<div class="pdf-toolbar">' +
     '<span class="pdf-toolbar-title">ChatGPT Response</span>' +
-    '<button class="pdf-btn-primary" onclick="window.print()">&#128196; \u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043A\u0430\u043A PDF / \u041F\u0435\u0447\u0430\u0442\u044C</button>' +
-    '<button class="pdf-btn-secondary" onclick="window.close()">\u0417\u0430\u043A\u0440\u044B\u0442\u044C</button>' +
+    '<button class="pdf-btn-primary" id="pdf-print-btn">&#128196; \u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043A\u0430\u043A PDF / \u041F\u0435\u0447\u0430\u0442\u044C</button>' +
+    '<button class="pdf-btn-secondary" id="pdf-close-btn">\u0417\u0430\u043A\u0440\u044B\u0442\u044C</button>' +
     '</div>' +
     '<div class="pdf-content">' +
     cleanHtml +
@@ -137,6 +139,22 @@ export function generatePdfViaPrint(messageEl) {
   );
 
   printWindow.document.close();
+
+  // Attach event listeners programmatically (inline onclick blocked by CSP)
+  try {
+    const printBtn = printWindow.document.getElementById('pdf-print-btn');
+    if (printBtn) {
+      printBtn.addEventListener('click', function () { printWindow.print(); });
+    }
+    const closeBtn = printWindow.document.getElementById('pdf-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () { printWindow.close(); });
+    }
+  } catch (e) {
+    // If cross-origin restrictions prevent access, buttons won't work
+    console.warn('Could not attach PDF toolbar handlers:', e);
+  }
+
   return true;
 }
 
@@ -221,23 +239,108 @@ function createPrintContainer(sourceContent) {
  * Get KaTeX styles for the print window (extract from current page)
  */
 function getKatexStyles() {
-  const katexStyles = [];
+  // 1. Try external katex stylesheets
+  const externalLinks = [];
   for (const sheet of document.styleSheets) {
     try {
       if (sheet.href && sheet.href.includes('katex')) {
-        katexStyles.push('<link rel="stylesheet" href="' + sheet.href + '">');
+        externalLinks.push('<link rel="stylesheet" href="' + sheet.href + '">');
       }
     } catch (e) {
       // Cross-origin stylesheet
     }
   }
+  if (externalLinks.length > 0) return externalLinks.join('\n');
 
-  if (katexStyles.length === 0) {
-    const katexStyleEl = document.querySelector('style[data-katex]');
-    if (katexStyleEl) {
-      katexStyles.push('<style>' + katexStyleEl.textContent + '</style>');
+  // 2. Try inline katex style element
+  const katexStyleEl = document.querySelector('style[data-katex]');
+  if (katexStyleEl) {
+    return '<style>' + katexStyleEl.textContent + '</style>';
+  }
+
+  // 3. Extract all CSS rules targeting .katex from all accessible stylesheets
+  let katexRules = '';
+  for (const sheet of document.styleSheets) {
+    try {
+      const rules = sheet.cssRules || sheet.rules;
+      if (!rules) continue;
+      for (const rule of rules) {
+        const text = rule.cssText || '';
+        if (text.includes('.katex') || text.includes('@font-face')) {
+          katexRules += text + '\n';
+        }
+      }
+    } catch (e) {
+      // Cross-origin stylesheet - try to link it
+      if (sheet.href) {
+        externalLinks.push('<link rel="stylesheet" href="' + sheet.href + '">');
+      }
     }
   }
 
-  return katexStyles.join('\n');
+  if (katexRules) {
+    return '<style>' + katexRules + '</style>' + (externalLinks.length > 0 ? '\n' + externalLinks.join('\n') : '');
+  }
+
+  if (externalLinks.length > 0) {
+    return externalLinks.join('\n');
+  }
+
+  // 4. Fallback: minimal KaTeX-like styles so formulas don't completely break
+  return '<style>' +
+    '.katex { font-family: KaTeX_Main, "Times New Roman", serif; white-space: nowrap; }' +
+    '.katex .katex-mathml { position: absolute; clip: rect(1px,1px,1px,1px); padding: 0; border: 0; height: 1px; width: 1px; overflow: hidden; }' +
+    '.katex .mord { font-family: KaTeX_Main, serif; }' +
+    '.katex .mbin, .katex .mrel, .katex .mop { font-family: KaTeX_Main, serif; }' +
+    '.katex .mfrac .frac-line { border-bottom-style: solid; border-bottom-width: 1px; }' +
+    '.katex .msupsub { font-size: 0.7em; }' +
+    '.katex .sqrt-sign { font-family: KaTeX_Main, serif; }' +
+    '.katex-display { display: block; margin: 1em 0; text-align: center; }' +
+    '.katex-display > .katex { display: inline-block; }' +
+    '</style>';
+}
+
+/**
+ * Extract all accessible page styles for the print window.
+ * This catches styles ChatGPT injects that affect formula rendering,
+ * code blocks, etc. beyond just KaTeX.
+ */
+function extractPageStyles() {
+  const parts = [];
+  for (const sheet of document.styleSheets) {
+    try {
+      // Link external stylesheets (except katex - already handled)
+      if (sheet.href) {
+        if (!sheet.href.includes('katex')) {
+          parts.push('<link rel="stylesheet" href="' + sheet.href + '">');
+        }
+        continue;
+      }
+      // For inline <style> tags, check if they contain relevant rules
+      const rules = sheet.cssRules || sheet.rules;
+      if (!rules) continue;
+      let relevant = '';
+      for (const rule of rules) {
+        const text = rule.cssText || '';
+        // Keep rules that affect math, code, or general typography
+        if (
+          text.includes('.katex') ||
+          text.includes('.math') ||
+          text.includes('@font-face') ||
+          text.includes('.code') ||
+          text.includes('pre') ||
+          text.includes('.prose') ||
+          text.includes('.markdown')
+        ) {
+          relevant += text + '\n';
+        }
+      }
+      if (relevant) {
+        parts.push('<style>' + relevant + '</style>');
+      }
+    } catch (e) {
+      // Cross-origin - skip
+    }
+  }
+  return parts.join('\n');
 }

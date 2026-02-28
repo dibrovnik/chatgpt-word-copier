@@ -235,7 +235,9 @@ function buildVertAlignRun(text, align) {
 function buildInlineMath(item, ctx) {
   if (ctx.mathMode === 'omml') {
     if (item.mathml) {
-      return mathmlToOmml(item.mathml);
+      // Strip display="block" to prevent <m:oMathPara> wrapping inside <w:p>
+      const inlineMathml = item.mathml.replace(/\bdisplay\s*=\s*"block"/g, '');
+      return mathmlToOmml(inlineMathml);
     } else if (item.latex) {
       return latexToOmml(item.latex, false);
     }
@@ -252,13 +254,15 @@ function buildMathBlock(block, ctx) {
   if (ctx.mathMode === 'omml') {
     let omml;
     if (block.mathml) {
-      omml = mathmlToOmml(block.mathml);
+      // Strip display="block" — we handle centering via <w:p> wrapper, not <m:oMathPara>
+      const inlineMathml = block.mathml.replace(/\bdisplay\s*=\s*"block"/g, '');
+      omml = mathmlToOmml(inlineMathml);
     } else if (block.latex) {
-      omml = latexToOmml(block.latex, true);
+      omml = latexToOmml(block.latex, false);
     } else {
       return '';
     }
-    // Wrap in paragraph with math
+    // Wrap in centered paragraph with <m:oMath> (NOT <m:oMathPara>)
     return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr>${omml}</w:p>`;
   }
 
@@ -437,9 +441,7 @@ function generateDocumentXml(bodyContent) {
 
 function generateStyles() {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-          mc:Ignorable="w14">
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:docDefaults>
     <w:rPrDefault>
       <w:rPr>
@@ -615,9 +617,7 @@ function generateStyles() {
 function generateSettings() {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
-            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-            mc:Ignorable="w14">
+            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
   <w:zoom w:percent="100"/>
   <w:defaultTabStop w:val="720"/>
   <m:mathPr>
@@ -694,10 +694,7 @@ function generateDocumentRels(extraRels) {
 
 function generateNumbering() {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="w14">
-  <!-- Abstract numbering: bullets (abstractNumId=0, used by numId=1) -->
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:abstractNum w:abstractNumId="0">
     <w:nsid w:val="00000001"/>
     <w:multiLevelType w:val="hybridMultilevel"/>
@@ -774,8 +771,6 @@ function generateNumbering() {
       <w:rPr><w:rFonts w:ascii="Wingdings" w:hAnsi="Wingdings" w:hint="default"/></w:rPr>
     </w:lvl>
   </w:abstractNum>
-
-  <!-- Abstract numbering: ordered/decimal (abstractNumId=1, used by numId=2) -->
   <w:abstractNum w:abstractNumId="1">
     <w:nsid w:val="00000002"/>
     <w:multiLevelType w:val="hybridMultilevel"/>
@@ -843,8 +838,6 @@ function generateNumbering() {
       <w:pPr><w:ind w:left="6480" w:hanging="360"/></w:pPr>
     </w:lvl>
   </w:abstractNum>
-
-  <!-- Numbering instances -->
   <w:num w:numId="1">
     <w:abstractNumId w:val="0"/>
   </w:num>

@@ -80,7 +80,27 @@ function prepareMathMLHtml(container) {
         mathClone.setAttribute('display', 'block');
       }
       const wrapper = katex.closest('.katex-display') || katex;
-      wrapper.replaceWith(mathClone);
+
+      // Ensure spaces are preserved around inline math (Word strips whitespace around <math>)
+      if (!isDisplay) {
+        const prev = wrapper.previousSibling;
+        const next = wrapper.nextSibling;
+        const needSpaceBefore = prev && prev.nodeType === Node.TEXT_NODE &&
+          prev.textContent.length > 0 && !prev.textContent.endsWith(' ') && !prev.textContent.endsWith('\u00A0');
+        const needSpaceAfter = next && next.nodeType === Node.TEXT_NODE &&
+          next.textContent.length > 0 && !next.textContent.startsWith(' ') && !next.textContent.startsWith('\u00A0');
+
+        wrapper.replaceWith(mathClone);
+
+        if (needSpaceBefore) {
+          mathClone.before(document.createTextNode('\u00A0'));
+        }
+        if (needSpaceAfter) {
+          mathClone.after(document.createTextNode('\u00A0'));
+        }
+      } else {
+        wrapper.replaceWith(mathClone);
+      }
     }
   }
 
