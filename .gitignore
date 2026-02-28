@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+*.zip
+*.tar.gz
+*.log
+.env
+.idea/
+.vscode/
+.DS_Store
+coverage/
+*.bak
+*.tmp
+*.swp

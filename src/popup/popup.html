@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatGPT → Word Copier</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="4" fill="#3B82F6"/>
+          <path d="M5 6L8 18L12 12L16 18L19 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1>ChatGPT → Word</h1>
+      </div>
+      <span class="version">v1.0</span>
+    </div>
+
+    <div id="status" class="status status-ok">
+      <span class="status-dot"></span>
+      <span id="statusText">Расширение активно</span>
+    </div>
+
+    <div class="section">
+      <h2>Действия с последним ответом</h2>
+      <div class="actions">
+        <button id="btnCopy" class="btn btn-primary" title="Копировать с формулами для Word">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="5" y="1" width="9" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="2" y="3" width="9" height="12" rx="1" fill="white" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          Копировать для Word
+        </button>
+        <button id="btnDocx" class="btn btn-secondary" title="Скачать как DOCX файл">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 1h8l4 4v10H2V1z" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M8 8v5M6 11l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Скачать DOCX
+        </button>
+        <button id="btnPdf" class="btn btn-secondary" title="Скачать как PDF файл">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 1h8l4 4v10H2V1z" stroke="currentColor" stroke-width="1.5"/>
+            <text x="4" y="12" font-size="6" fill="currentColor" font-weight="bold">PDF</text>
+          </svg>
+          Скачать PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Настройки</h2>
+      <div class="setting">
+        <label for="mathMode">Формат формул в DOCX:</label>
+        <select id="mathMode">
+          <option value="omml" selected>OMML (редактируемые)</option>
+          <option value="image">Изображения (для совместимости)</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label>
+          <input type="checkbox" id="showButtons" checked />
+          Показывать кнопки на странице ChatGPT
+        </label>
+      </div>
+      <div class="setting">
+        <label>
+          <input type="checkbox" id="darkThemeDocx" />
+          Тёмная тема в DOCX
+        </label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Подсказка</h2>
+      <p class="tip">
+        На странице ChatGPT при наведении на ответ появятся кнопки быстрого действия. 
+        Также можно выделить часть ответа и скопировать только выделенное.
+      </p>
+    </div>
+
+    <div id="notification" class="notification hidden"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
