@@ -39,23 +39,37 @@ jobs:
 
       - run: npm ci
 
-      # Sync version into manifest.json and build
-      - run: npm run build
-
-      # Package into zip
-      - name: Create extension archive
-        run: |
-          cd dist
-          zip -r ../chatgpt-word-copier.zip . -x '.*'
-
-      # Extract version for artifact name
+      # Extract version for artifact names
       - name: Read version
         id: version
         run: echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
 
-      - name: Upload extension artifact
+      # ── Chrome build ──
+      - run: npm run build
+
+      - name: Create Chrome archive
+        run: |
+          cd dist
+          zip -r ../chatgpt-word-copier.zip . -x '.*'
+
+      - name: Upload Chrome artifact
         uses: actions/upload-artifact@v4
         with:
           name: chatgpt-word-copier-v${{ steps.version.outputs.version }}
           path: chatgpt-word-copier.zip
+          retention-days: 90
+
+      # ── Firefox build ──
+      - run: npm run build:firefox
+
+      - name: Create Firefox archive
+        run: |
+          cd dist-firefox
+          zip -r ../chatgpt-word-copier-firefox.zip . -x '.*'
+
+      - name: Upload Firefox artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatgpt-word-copier-firefox-v${{ steps.version.outputs.version }}
+          path: chatgpt-word-copier-firefox.zip
           retention-days: 90

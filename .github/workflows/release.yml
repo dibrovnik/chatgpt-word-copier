@@ -24,21 +24,44 @@ jobs:
 
       - run: npm test
 
-      - run: npm run build
-
       # Extract version from tag
       - name: Extract version
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
-      - name: Create extension archive
+      # ── Chrome build ──
+      - run: npm run build
+
+      - name: Create Chrome archive
         run: |
           cd dist
           zip -r ../chatgpt-word-copier-v${{ steps.version.outputs.version }}.zip . -x '.*'
 
+      # ── Firefox build ──
+      - run: npm run build:firefox
+
+      - name: Create Firefox archive
+        run: |
+          cd dist-firefox
+          zip -r ../chatgpt-word-copier-firefox-v${{ steps.version.outputs.version }}.zip . -x '.*'
+
+      # ── Publish Firefox to AMO ──
+      - name: Sign and submit to AMO
+        run: |
+          npx web-ext sign \
+            --source-dir=dist-firefox \
+            --channel=listed \
+            --approval-timeout=0
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+
+      # ── GitHub Release ──
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: v${{ steps.version.outputs.version }}
           generate_release_notes: true
-          files: chatgpt-word-copier-v${{ steps.version.outputs.version }}.zip
+          files: |
+            chatgpt-word-copier-v${{ steps.version.outputs.version }}.zip
+            chatgpt-word-copier-firefox-v${{ steps.version.outputs.version }}.zip

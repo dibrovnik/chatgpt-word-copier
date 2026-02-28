@@ -19,12 +19,14 @@
     "version:major": "npm version major",
     "package": "node scripts/version.mjs && node scripts/build.mjs && node scripts/package.mjs",
     "package:firefox": "node scripts/version.mjs && node scripts/build.mjs --firefox && node scripts/package.mjs --firefox",
-    "package:all": "npm run package && npm run package:firefox"
+    "package:all": "npm run package && npm run package:firefox",
+    "submit:firefox": "npm run build:firefox && npx web-ext sign --source-dir=dist-firefox --channel=listed --approval-timeout=0"
   },
   "devDependencies": {
     "esbuild": "^0.20.0",
     "jsdom": "^28.1.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "web-ext": "^9.3.0"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
