@@ -4,11 +4,16 @@
   "description": "Chrome extension to copy ChatGPT responses with formulas for MS Word",
   "private": true,
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/version.mjs && node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
     "icons": "node scripts/generate-icons.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "version": "node scripts/version.mjs && git add src/manifest.json",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major",
+    "package": "node scripts/version.mjs && node scripts/build.mjs && cd dist && zip -r ../chatgpt-word-copier.zip . -x '.*'"
   },
   "devDependencies": {
     "esbuild": "^0.20.0",
