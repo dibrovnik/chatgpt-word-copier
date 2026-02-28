@@ -2,6 +2,7 @@
   "name": "chatgpt-word-copier",
   "version": "1.0.1",
   "description": "Chrome extension to copy ChatGPT responses with formulas for MS Word",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "build": "node scripts/version.mjs && node scripts/build.mjs",
