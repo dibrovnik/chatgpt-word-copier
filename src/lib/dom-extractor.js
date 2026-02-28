@@ -152,11 +152,27 @@ function parseElement(el) {
 
   // Div with content (catch-all for wrapped content)
   if (tag === 'div') {
+    // Skip our own injected UI elements
+    if (el.classList.contains('cgpt-word-copier-buttons')) return null;
+
+    // Skip ChatGPT interactive/utility elements
+    if (el.classList.contains('sticky')) return null;
+    if (el.querySelector(':scope > button[aria-label]') && !el.querySelector(':scope > p, :scope > table, :scope > h1, :scope > h2, :scope > h3')) return null;
+
     // Check for math display
     const katexDisplay = el.querySelector('.katex-display');
     if (katexDisplay) {
       const katexEl = katexDisplay.querySelector('.katex') || katexDisplay;
       return extractMathBlock(katexEl, true);
+    }
+
+    // Check for table inside div wrapper (ChatGPT wraps tables in container divs)
+    const table = el.querySelector('table');
+    if (table) {
+      return {
+        type: 'table',
+        rows: extractTableRows(table),
+      };
     }
 
     // Otherwise treat as paragraph-like
@@ -392,6 +408,22 @@ export function getCleanHtmlWithMathML(messageEl) {
   const katexHtml = clone.querySelectorAll('.katex-html');
   for (const el of katexHtml) {
     el.remove();
+  }
+
+  // Remove ChatGPT interactive elements (table copy buttons, action buttons)
+  const interactiveSelectors = [
+    '.sticky',                           // Table copy button containers
+    '.cgpt-word-copier-buttons',         // Our injected buttons
+    'button[aria-label]',                // All labeled buttons (copy, etc.)
+    '[data-testid*="button"]',           // Test-id buttons
+    '.code-block-header button',         // Code block copy buttons
+    '.absolute.end-0',                   // Positioned utility elements
+  ];
+  for (const sel of interactiveSelectors) {
+    const elements = clone.querySelectorAll(sel);
+    for (const el of elements) {
+      el.remove();
+    }
   }
 
   // Clean up code block headers (ChatGPT adds copy buttons etc.)
