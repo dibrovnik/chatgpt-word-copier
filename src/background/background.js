@@ -1,12 +1,15 @@
 /**
- * Background Service Worker - handles downloads and coordination
+ * Background Service Worker / Script - handles downloads and coordination.
+ * Works in both Chrome (service worker) and Firefox (background script).
  */
 
+import { onInstalled, onMessage, storageSet, download } from '../lib/browser-api';
+
 // Handle extension installation
-chrome.runtime.onInstalled.addListener((details) => {
+onInstalled((details) => {
   if (details.reason === 'install') {
     // Set default settings
-    chrome.storage.local.set({
+    storageSet({
       showButtons: true,
       mathMode: 'omml',
       darkThemeDocx: false,
@@ -16,7 +19,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 // Handle messages from content script or popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+onMessage((message, sender, sendResponse) => {
   if (message.type === 'download') {
     // Handle file downloads
     handleDownload(message.data, message.filename, message.mimeType);
@@ -29,11 +32,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * Trigger a file download
  */
 function handleDownload(dataUrl, filename, mimeType) {
-  chrome.downloads.download({
+  download({
     url: dataUrl,
     filename: filename,
     saveAs: true,
-  });
+  }).catch((err) => console.error('[ChatGPT→Word Copier] Download error:', err));
 }
 
 console.log('[ChatGPT→Word Copier] Background service worker loaded');

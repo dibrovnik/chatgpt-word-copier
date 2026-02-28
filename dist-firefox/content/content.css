@@ -1,0 +1,190 @@
+/* ===== ChatGPT → Word Copier - Content Script Styles ===== */
+
+/* Button container */
+.cgpt-word-copier-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  flex-wrap: wrap;
+}
+
+/* Show on hover over message area */
+[data-message-author-role="assistant"]:hover .cgpt-word-copier-buttons,
+.agent-turn:hover .cgpt-word-copier-buttons,
+.markdown.prose:hover .cgpt-word-copier-buttons,
+.cgpt-word-copier-buttons:hover {
+  opacity: 1;
+}
+
+/* Also show when any button is loading */
+.cgpt-word-copier-buttons:has(.loading) {
+  opacity: 1;
+}
+
+/* Action buttons */
+.cgpt-wc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #374151;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1.4;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.cgpt-wc-btn:hover {
+  background: #f3f4f6;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.cgpt-wc-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Primary copy button */
+.cgpt-wc-btn:first-child {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.cgpt-wc-btn:first-child:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+/* Loading state */
+.cgpt-wc-btn.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.cgpt-wc-btn.loading span {
+  visibility: hidden;
+}
+
+.cgpt-wc-btn.loading svg {
+  visibility: hidden;
+}
+
+.cgpt-wc-btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  top: 50%;
+  left: 50%;
+  margin: -7px 0 0 -7px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #374151;
+  border-radius: 50%;
+  animation: cgpt-wc-spin 0.6s linear infinite;
+}
+
+.cgpt-wc-btn:first-child.loading::after {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+}
+
+/* Toast notification */
+.cgpt-wc-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  z-index: 999999;
+  opacity: 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.cgpt-wc-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.cgpt-wc-toast-success {
+  background: #10b981;
+  color: white;
+}
+
+.cgpt-wc-toast-error {
+  background: #ef4444;
+  color: white;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .cgpt-wc-btn {
+    background: rgba(55, 65, 81, 0.95);
+    color: #e5e7eb;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .cgpt-wc-btn:hover {
+    background: rgba(75, 85, 99, 0.95);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .cgpt-wc-btn:first-child {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+
+  .cgpt-wc-btn:first-child:hover {
+    background: #2563eb;
+  }
+}
+
+/* ChatGPT dark theme */
+html.dark .cgpt-wc-btn,
+[data-theme="dark"] .cgpt-wc-btn {
+  background: rgba(55, 65, 81, 0.95);
+  color: #e5e7eb;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.dark .cgpt-wc-btn:hover,
+[data-theme="dark"] .cgpt-wc-btn:hover {
+  background: rgba(75, 85, 99, 0.95);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+html.dark .cgpt-wc-btn:first-child,
+[data-theme="dark"] .cgpt-wc-btn:first-child {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+/* Animation */
+@keyframes cgpt-wc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Ensure buttons don't affect ChatGPT layout */
+.cgpt-word-copier-buttons * {
+  box-sizing: border-box;
+}

@@ -13,6 +13,7 @@ import {
 } from '../lib/dom-extractor';
 import { buildDocx } from '../lib/docx-builder';
 import { generatePdfViaPrint } from '../lib/pdf-generator';
+import { storageGet, onMessage } from '../lib/browser-api';
 
 // Settings
 let settings = {
@@ -22,21 +23,19 @@ let settings = {
 };
 
 // Load settings
-try {
-  chrome.storage?.local?.get(['showButtons', 'mathMode', 'darkThemeDocx'], (result) => {
-    if (result) {
-      settings = { ...settings, ...result };
-      if (settings.showButtons) {
-        injectButtons();
-      }
+storageGet(['showButtons', 'mathMode', 'darkThemeDocx']).then((result) => {
+  if (result) {
+    settings = { ...settings, ...result };
+    if (settings.showButtons) {
+      injectButtons();
     }
-  });
-} catch (e) {
+  }
+}).catch(() => {
   // Storage not available
-}
+});
 
 // ===== Message Listener =====
-chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
+onMessage((message, sender, sendResponse) => {
   handleMessage(message).then(sendResponse);
   return true; // Keep channel open for async response
 });
