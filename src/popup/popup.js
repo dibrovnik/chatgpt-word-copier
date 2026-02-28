@@ -1,6 +1,9 @@
 /**
- * Popup script - handles UI interactions and communicates with content script
+ * Popup script - handles UI interactions and communicates with content script.
+ * Works in both Chrome and Firefox via browser-api helper.
  */
+
+import { storageGet, storageSet, tabsQuery, tabsSendMessage } from '../lib/browser-api';
 
 // DOM elements
 const btnCopy = document.getElementById('btnCopy');
@@ -14,25 +17,25 @@ const statusText = document.getElementById('statusText');
 const notification = document.getElementById('notification');
 
 // Load saved settings
-chrome.storage?.local?.get(['mathMode', 'showButtons', 'darkThemeDocx'], (result) => {
+storageGet(['mathMode', 'showButtons', 'darkThemeDocx']).then((result) => {
   if (result.mathMode) mathMode.value = result.mathMode;
   if (result.showButtons !== undefined) showButtons.checked = result.showButtons;
   if (result.darkThemeDocx !== undefined) darkThemeDocx.checked = result.darkThemeDocx;
-});
+}).catch(() => {});
 
 // Save settings on change
 mathMode.addEventListener('change', () => {
-  chrome.storage?.local?.set({ mathMode: mathMode.value });
+  storageSet({ mathMode: mathMode.value });
   sendToContent({ type: 'settingsChanged', settings: getSettings() });
 });
 
 showButtons.addEventListener('change', () => {
-  chrome.storage?.local?.set({ showButtons: showButtons.checked });
+  storageSet({ showButtons: showButtons.checked });
   sendToContent({ type: 'settingsChanged', settings: getSettings() });
 });
 
 darkThemeDocx.addEventListener('change', () => {
-  chrome.storage?.local?.set({ darkThemeDocx: darkThemeDocx.checked });
+  storageSet({ darkThemeDocx: darkThemeDocx.checked });
 });
 
 function getSettings() {
@@ -46,7 +49,8 @@ function getSettings() {
 // Check if we're on a ChatGPT page
 async function checkStatus() {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tabs = await tabsQuery({ active: true, currentWindow: true });
+    const tab = tabs[0];
     if (tab && (tab.url?.includes('chatgpt.com') || tab.url?.includes('chat.openai.com'))) {
       statusEl.className = 'status status-ok';
       statusText.textContent = 'Расширение активно на ChatGPT';
@@ -71,9 +75,10 @@ checkStatus();
 // Send message to content script
 async function sendToContent(message) {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tabs = await tabsQuery({ active: true, currentWindow: true });
+    const tab = tabs[0];
     if (!tab) throw new Error('No active tab');
-    return await chrome.tabs.sendMessage(tab.id, message);
+    return await tabsSendMessage(tab.id, message);
   } catch (e) {
     showNotification('Ошибка: обновите страницу ChatGPT', 'error');
     throw e;
