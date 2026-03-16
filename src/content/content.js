@@ -144,6 +144,10 @@ function addButtonsToMessage(messageEl) {
   const contentEl = getMarkdownContent(messageEl);
   if (!contentEl) return;
 
+  if (messageEl.closest('details, summary') || contentEl.closest('details, summary')) {
+    return;
+  }
+  
   // Create button container
   const container = document.createElement('div');
   container.className = BUTTON_CONTAINER_CLASS;
@@ -216,12 +220,12 @@ function addButtonsToMessage(messageEl) {
   container.appendChild(docxBtn);
   container.appendChild(pdfBtn);
 
-  // Insert at the top of the message, or find a good parent
+  // Insert buttons under the GPT response
   const target = contentEl.parentElement || contentEl;
-  if (contentEl === messageEl) {
-    messageEl.insertBefore(container, messageEl.firstChild);
+  if (contentEl.nextSibling) {
+    contentEl.parentNode.insertBefore(container, contentEl.nextSibling);
   } else {
-    target.insertBefore(container, contentEl);
+    contentEl.parentNode.appendChild(container);
   }
 }
 
