@@ -16,6 +16,9 @@ const statusEl = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const notification = document.getElementById('notification');
 const versionEl = document.querySelector('.version');
+const promptInput = document.getElementById('promptInput');
+const btnSavePrompt = document.getElementById('btnSavePrompt');
+const promptsList = document.getElementById('promptsList');
 
 // Load and display version from manifest
 try {
@@ -163,3 +166,117 @@ btnPdf.addEventListener('click', async () => {
     setLoading(btnPdf, false);
   }
 });
+
+// Saved prompts management
+function loadPrompts() {
+  return storageGet(['savedPrompts']).then((result) => {
+    return result.savedPrompts || [];
+  }).catch(() => []);
+}
+
+function savePrompts(prompts) {
+  return storageSet({ savedPrompts: prompts });
+}
+
+function renderPrompts() {
+  loadPrompts().then((prompts) => {
+    promptsList.innerHTML = '';
+    
+    if (prompts.length === 0) {
+      promptsList.innerHTML = '<div class="prompts-empty">Нет сохраненных промтов</div>';
+      return;
+    }
+    
+    prompts.forEach((prompt, index) => {
+      const item = document.createElement('div');
+      item.className = 'prompt-item';
+      item.innerHTML = `
+        <div class="prompt-text" title="${prompt}">Нажмите для копирования: ${prompt}</div>
+        <div class="prompt-actions">
+          <button class="btn-prompt-action btn-prompt-copy" title="Копировать">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <rect x="5" y="1" width="9" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="2" y="3" width="9" height="12" rx="1" fill="white" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+          <button class="btn-prompt-action btn-prompt-delete" title="Удалить">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M2 4h12M3 4v9a1 1 0 001 1h8a1 1 0 001-1V4m-5 3v4m2-4v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      `;
+      
+      // Copy prompt to clipboard
+      const promptText = item.querySelector('.prompt-text');
+      promptText.addEventListener('click', () => {
+        navigator.clipboard.writeText(prompt).then(() => {
+          showNotification('✓ Промт скопирован', 'success');
+        });
+      });
+      
+      // Copy button
+      const copyBtn = item.querySelector('.btn-prompt-copy');
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(prompt).then(() => {
+          showNotification('✓ Промт скопирован', 'success');
+        });
+      });
+      
+      // Delete button
+      const deleteBtn = item.querySelector('.btn-prompt-delete');
+      deleteBtn.addEventListener('click', () => {
+        loadPrompts().then((currentPrompts) => {
+          currentPrompts.splice(index, 1);
+          savePrompts(currentPrompts);
+          renderPrompts();
+          showNotification('✓ Промт удален', 'success');
+        });
+      });
+      
+      promptsList.appendChild(item);
+    });
+  });
+}
+
+// Save new prompt
+function saveNewPrompt() {
+  const promptText = promptInput.value.trim();
+  
+  if (!promptText) {
+    showNotification('⚠ Введите промт', 'error');
+    return;
+  }
+  
+  if (promptText.length > 500) {
+    showNotification('⚠ Промт слишком длинный (макс. 500 символов)', 'error');
+    return;
+  }
+  
+  loadPrompts().then((prompts) => {
+    // Avoid duplicates
+    if (prompts.includes(promptText)) {
+      showNotification('⚠ Этот промт уже сохранен', 'error');
+      return;
+    }
+    
+    prompts.unshift(promptText); // Add to beginning
+    prompts = prompts.slice(0, 20); // Keep only last 20
+    
+    savePrompts(prompts).then(() => {
+      promptInput.value = '';
+      renderPrompts();
+      showNotification('✓ Промт сохранен', 'success');
+    });
+  });
+}
+
+btnSavePrompt.addEventListener('click', saveNewPrompt);
+promptInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    saveNewPrompt();
+  }
+});
+
+// Initial render
+renderPrompts();

@@ -75,6 +75,21 @@
     </div>
 
     <div class="section">
+      <h2>Сохраненные промты</h2>
+      <div class="prompt-input-group">
+        <input type="text" id="promptInput" class="prompt-input" placeholder="Введите промт и сохраните" />
+        <button id="btnSavePrompt" class="btn btn-secondary" title="Сохранить промт">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 1h8l4 4v10H2V1z" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="8" y1="5" x2="8" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="promptsList" class="prompts-list"></div>
+    </div>
+
+    <div class="section">
       <h2>Подсказка</h2>
       <p class="tip">
         На странице ChatGPT при наведении на ответ появятся кнопки быстрого действия. 
