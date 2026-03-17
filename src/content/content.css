@@ -11,12 +11,42 @@
   flex-wrap: wrap;
 }
 
+.cgpt-word-copier-prompt-buttons {
+  padding: 8px 0 2px;
+}
+
+[data-message-author-role="user"] {
+  position: relative;
+}
+
+.cgpt-word-copier-prompt-buttons-floating {
+  position: absolute;
+  top: 50%;
+  left: 0px;
+  transform: translateY(-50%);
+  padding: 0;
+  z-index: 3;
+}
+
 /* Show on hover over message area */
 [data-message-author-role="assistant"]:hover .cgpt-word-copier-buttons,
 .agent-turn:hover .cgpt-word-copier-buttons,
 .markdown.prose:hover .cgpt-word-copier-buttons,
 .cgpt-word-copier-buttons:hover {
   opacity: 1;
+}
+
+[data-message-author-role="user"]:hover .cgpt-word-copier-prompt-buttons,
+[data-message-author-role="user"] .cgpt-word-copier-prompt-buttons:hover {
+  opacity: 1;
+}
+
+@media (max-width: 980px) {
+  .cgpt-word-copier-prompt-buttons-floating {
+    position: static;
+    transform: none;
+    padding: 8px 0 2px;
+  }
 }
 
 /* Also show when any button is loading */
@@ -66,6 +96,13 @@
 .cgpt-wc-btn:first-child:hover {
   background: #2563eb;
   border-color: #2563eb;
+}
+
+.cgpt-wc-btn.cgpt-wc-btn-prompt,
+.cgpt-wc-btn.cgpt-wc-btn-prompt:hover {
+  background: rgba(255, 255, 255, 0.95);
+  color: #374151;
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Loading state */
@@ -177,6 +214,15 @@ html.dark .cgpt-wc-btn:first-child,
   background: #3b82f6;
   color: white;
   border-color: #3b82f6;
+}
+
+html.dark .cgpt-wc-btn.cgpt-wc-btn-prompt,
+[data-theme="dark"] .cgpt-wc-btn.cgpt-wc-btn-prompt,
+html.dark .cgpt-wc-btn.cgpt-wc-btn-prompt:hover,
+[data-theme="dark"] .cgpt-wc-btn.cgpt-wc-btn-prompt:hover {
+  background: rgba(55, 65, 81, 0.95);
+  color: #e5e7eb;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Animation */

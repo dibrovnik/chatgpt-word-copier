@@ -14,7 +14,7 @@ import {
 } from '../lib/dom-extractor';
 import { buildDocx } from '../lib/docx-builder';
 import { generatePdfViaPrint } from '../lib/pdf-generator';
-import { storageGet, onMessage } from '../lib/browser-api';
+import { storageGet, storageSet, onMessage } from '../lib/browser-api';
 
 // Settings
 let settings = {
@@ -120,7 +120,7 @@ function injectButtons() {
   processMessages();
   
   // Inject prompt copy buttons for last 3 user messages
-  injectPromptCopyButtons();
+  syncPromptCopyButtons();
 
   // Watch for new messages
   startObserver();
@@ -236,60 +236,101 @@ function addButtonsToMessage(messageEl) {
   }
 }
 
-function injectPromptCopyButtons() {
+function syncPromptCopyButtons() {
   const PROMPT_BUTTON_ATTR = 'data-prompt-copy-processed';
+  const promptContainers = document.querySelectorAll('.cgpt-word-copier-prompt-buttons');
+  promptContainers.forEach((container) => container.remove());
+
+  const processedPrompts = document.querySelectorAll(`[${PROMPT_BUTTON_ATTR}]`);
+  processedPrompts.forEach((el) => el.removeAttribute(PROMPT_BUTTON_ATTR));
+
   const userMessages = getUserMessages();
-  
-  // Get last 3 user messages
   const lastThreeMessages = userMessages.slice(-3);
-  
+
   lastThreeMessages.forEach((msgEl) => {
-    if (msgEl.hasAttribute(PROMPT_BUTTON_ATTR)) return;
     msgEl.setAttribute(PROMPT_BUTTON_ATTR, 'true');
-    
+
     const promptBtn = createActionButton(
-      'Копировать промт',
+      'Сохранить промт',
       promptIcon(),
       async () => {
         promptBtn.classList.add('loading');
         try {
-          const promptText = msgEl.textContent.trim();
+          const promptText = extractUserPromptText(msgEl);
           if (!promptText) {
             showToast('Пустое сообщение', 'error');
             return;
           }
-          
-          await navigator.clipboard.writeText(promptText);
-          showToast('✓ Промт скопирован в буфер обмена!', 'success');
+
+          const saveResult = await savePromptToStorage(promptText);
+          if (saveResult === 'duplicate') {
+            showToast('Промт уже сохранен', 'success');
+          } else {
+            showToast('✓ Промт сохранен', 'success');
+          }
         } catch (e) {
           showToast('Ошибка: ' + e.message, 'error');
         } finally {
           promptBtn.classList.remove('loading');
         }
-      }
+      },
+      'cgpt-wc-btn-prompt'
     );
-    
-    // Find the content container and insert button
-    const content = msgEl.querySelector('[class*="message"], [class*="text"], div');
-    if (content) {
-      const buttonContainer = document.createElement('div');
-      buttonContainer.className = BUTTON_CONTAINER_CLASS;
-      buttonContainer.style.marginTop = '8px';
-      buttonContainer.appendChild(promptBtn);
-      
-      // Insert after message content
-      if (content.nextSibling) {
-        content.parentNode.insertBefore(buttonContainer, content.nextSibling);
-      } else {
-        content.parentNode.appendChild(buttonContainer);
-      }
-    }
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = `${BUTTON_CONTAINER_CLASS} cgpt-word-copier-prompt-buttons cgpt-word-copier-prompt-buttons-floating`;
+    buttonContainer.appendChild(promptBtn);
+
+    msgEl.appendChild(buttonContainer);
   });
 }
 
-function createActionButton(text, iconSvg, onClick) {
+function extractUserPromptText(messageEl) {
+  const cloned = messageEl.cloneNode(true);
+  cloned
+    .querySelectorAll('.cgpt-word-copier-buttons, .cgpt-word-copier-prompt-buttons')
+    .forEach((el) => el.remove());
+
+  const content = getUserMessageContent(cloned);
+  const raw = (content?.innerText || content?.textContent || '').trim();
+  return raw.replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+async function savePromptToStorage(promptText) {
+  const result = await storageGet(['savedPrompts']);
+  let savedPrompts = Array.isArray(result?.savedPrompts) ? result.savedPrompts : [];
+
+  if (savedPrompts.includes(promptText)) {
+    return 'duplicate';
+  }
+
+  savedPrompts.unshift(promptText);
+  savedPrompts = savedPrompts.slice(0, 20);
+  await storageSet({ savedPrompts });
+  return 'saved';
+}
+
+function getUserMessageContent(messageEl) {
+  const candidates = [
+    messageEl.querySelector('.whitespace-pre-wrap'),
+    messageEl.querySelector('[class*="whitespace-pre-wrap"]'),
+    messageEl.querySelector('[class*="prose"]'),
+    messageEl.querySelector('[dir="auto"]'),
+    messageEl.querySelector('[class*="text"]'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if ((candidate.textContent || '').trim().length > 0) {
+      return candidate;
+    }
+  }
+
+  return messageEl;
+}
+
+function createActionButton(text, iconSvg, onClick, extraClass = '') {
   const btn = document.createElement('button');
-  btn.className = 'cgpt-wc-btn';
+  btn.className = `cgpt-wc-btn ${extraClass}`.trim();
   btn.title = text;
   btn.innerHTML = `${iconSvg}<span>${text}</span>`;
   btn.addEventListener('click', (e) => {
@@ -349,7 +390,10 @@ function startObserver() {
     if (shouldProcess) {
       // Debounce
       clearTimeout(startObserver._timeout);
-      startObserver._timeout = setTimeout(processMessages, 500);
+      startObserver._timeout = setTimeout(() => {
+        processMessages();
+        syncPromptCopyButtons();
+      }, 500);
     }
   });
 
