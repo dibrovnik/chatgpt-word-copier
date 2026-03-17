@@ -15,16 +15,18 @@ import {
 import { buildDocx } from '../lib/docx-builder';
 import { generatePdfViaPrint } from '../lib/pdf-generator';
 import { storageGet, storageSet, onMessage } from '../lib/browser-api';
+import { getSystemLanguage, t } from '../lib/i18n';
 
 // Settings
 let settings = {
   showButtons: true,
   mathMode: 'omml',
   darkThemeDocx: false,
+  language: getSystemLanguage(),
 };
 
 // Load settings
-storageGet(['showButtons', 'mathMode', 'darkThemeDocx']).then((result) => {
+storageGet(['showButtons', 'mathMode', 'darkThemeDocx', 'language']).then((result) => {
   if (result) {
     settings = { ...settings, ...result };
     if (settings.showButtons) {
@@ -41,6 +43,10 @@ onMessage((message, sender, sendResponse) => {
   return true; // Keep channel open for async response
 });
 
+function tr(key) {
+  return t(settings.language, key);
+}
+
 async function handleMessage(message) {
   switch (message.type) {
     case 'copyForWord':
@@ -53,16 +59,22 @@ async function handleMessage(message) {
       return await handleExportPdf();
 
     case 'settingsChanged':
+      {
+      const previousLanguage = settings.language;
       settings = { ...settings, ...message.settings };
       if (settings.showButtons) {
+        if (previousLanguage !== settings.language) {
+          removeButtons();
+        }
         injectButtons();
       } else {
         removeButtons();
       }
       return { success: true };
+      }
 
     default:
-      return { success: false, error: 'Unknown message type' };
+      return { success: false, error: tr('unknownMessageType') };
   }
 }
 
@@ -72,12 +84,12 @@ async function handleExportDocx(exportSettings) {
   try {
     const lastMessage = getLastAssistantMessage();
     if (!lastMessage) {
-      return { success: false, error: 'Нет ответов ChatGPT на странице' };
+      return { success: false, error: tr('noResponsesOnPage') };
     }
 
     const blocks = extractContent(lastMessage);
     if (blocks.length === 0) {
-      return { success: false, error: 'Пустой ответ' };
+      return { success: false, error: tr('emptyResponse') };
     }
 
     const blob = await buildDocx(blocks, {
@@ -98,7 +110,7 @@ async function handleExportPdf() {
   try {
     const lastMessage = getLastAssistantMessage();
     if (!lastMessage) {
-      return { success: false, error: 'Нет ответов ChatGPT на странице' };
+      return { success: false, error: tr('noResponsesOnPage') };
     }
 
     // Use print-based PDF generation
@@ -161,19 +173,19 @@ function addButtonsToMessage(messageEl) {
 
   // Copy button
   const copyBtn = createActionButton(
-    'Копировать для Word',
+    tr('copyForWord'),
     copyIcon(),
     async () => {
       copyBtn.classList.add('loading');
       try {
         const result = await copyMessageForWord(messageEl);
         if (result.success) {
-          showToast('✓ Скопировано для Word!', 'success');
+          showToast(tr('copiedForWord'), 'success');
         } else {
-          showToast(result.error || 'Ошибка копирования', 'error');
+          showToast(result.error || tr('copyError'), 'error');
         }
       } catch (e) {
-        showToast('Ошибка: ' + e.message, 'error');
+        showToast(`${tr('errorPrefix')}: ${e.message}`, 'error');
       } finally {
         copyBtn.classList.remove('loading');
       }
@@ -189,7 +201,7 @@ function addButtonsToMessage(messageEl) {
       try {
         const blocks = extractContent(messageEl);
         if (blocks.length === 0) {
-          showToast('Пустой ответ', 'error');
+          showToast(tr('emptyResponse'), 'error');
           return;
         }
         const blob = await buildDocx(blocks, {
@@ -197,9 +209,9 @@ function addButtonsToMessage(messageEl) {
           mathMode: settings.mathMode,
         });
         downloadBlob(blob, `chatgpt-response-${getTimestamp()}.docx`);
-        showToast('✓ DOCX скачан!', 'success');
+        showToast(tr('docxDownloadedShort'), 'success');
       } catch (e) {
-        showToast('Ошибка: ' + e.message, 'error');
+        showToast(`${tr('errorPrefix')}: ${e.message}`, 'error');
       } finally {
         docxBtn.classList.remove('loading');
       }
@@ -214,9 +226,9 @@ function addButtonsToMessage(messageEl) {
       pdfBtn.classList.add('loading');
       try {
         generatePdfViaPrint(messageEl);
-        showToast('✓ PDF готов к печати', 'success');
+        showToast(tr('pdfReadyToPrint'), 'success');
       } catch (e) {
-        showToast('Ошибка: ' + e.message, 'error');
+        showToast(`${tr('errorPrefix')}: ${e.message}`, 'error');
       } finally {
         pdfBtn.classList.remove('loading');
       }
@@ -251,25 +263,25 @@ function syncPromptCopyButtons() {
     msgEl.setAttribute(PROMPT_BUTTON_ATTR, 'true');
 
     const promptBtn = createActionButton(
-      'Сохранить промт',
+      tr('savePrompt'),
       promptIcon(),
       async () => {
         promptBtn.classList.add('loading');
         try {
           const promptText = extractUserPromptText(msgEl);
           if (!promptText) {
-            showToast('Пустое сообщение', 'error');
+            showToast(tr('emptyMessage'), 'error');
             return;
           }
 
           const saveResult = await savePromptToStorage(promptText);
           if (saveResult === 'duplicate') {
-            showToast('Промт уже сохранен', 'success');
+            showToast(tr('promptAlreadySavedShort'), 'success');
           } else {
-            showToast('✓ Промт сохранен', 'success');
+            showToast(tr('promptSaved'), 'success');
           }
         } catch (e) {
-          showToast('Ошибка: ' + e.message, 'error');
+          showToast(`${tr('errorPrefix')}: ${e.message}`, 'error');
         } finally {
           promptBtn.classList.remove('loading');
         }

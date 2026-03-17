@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -21,64 +21,71 @@
 
     <div id="status" class="status status-ok">
       <span class="status-dot"></span>
-      <span id="statusText">Расширение активно</span>
+      <span id="statusText">Extension is active</span>
     </div>
 
     <div class="section">
-      <h2>Действия с последним ответом</h2>
+      <h2 id="actionsTitle">Actions For Last Response</h2>
       <div class="actions">
-        <button id="btnCopy" class="btn btn-primary" title="Копировать с формулами для Word">
+        <button id="btnCopy" class="btn btn-primary" title="Copy with formulas for Word">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <rect x="5" y="1" width="9" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
             <rect x="2" y="3" width="9" height="12" rx="1" fill="white" stroke="currentColor" stroke-width="1.5"/>
           </svg>
-          Копировать для Word
+          <span id="btnCopyLabel">Copy For Word</span>
         </button>
-        <button id="btnDocx" class="btn btn-secondary" title="Скачать как DOCX файл">
+        <button id="btnDocx" class="btn btn-secondary" title="Download as DOCX file">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M2 1h8l4 4v10H2V1z" stroke="currentColor" stroke-width="1.5"/>
             <path d="M8 8v5M6 11l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Скачать DOCX
+          <span id="btnDocxLabel">Download DOCX</span>
         </button>
-        <button id="btnPdf" class="btn btn-secondary" title="Скачать как PDF файл">
+        <button id="btnPdf" class="btn btn-secondary" title="Download as PDF file">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M2 1h8l4 4v10H2V1z" stroke="currentColor" stroke-width="1.5"/>
             <text x="4" y="12" font-size="6" fill="currentColor" font-weight="bold">PDF</text>
           </svg>
-          Скачать PDF
+          <span id="btnPdfLabel">Download PDF</span>
         </button>
       </div>
     </div>
 
     <div class="section">
-      <h2>Настройки</h2>
+      <h2 id="settingsTitle">Settings</h2>
       <div class="setting">
-        <label for="mathMode">Формат формул в DOCX:</label>
+        <label for="languageSelect" id="languageLabel">Language:</label>
+        <select id="languageSelect">
+          <option id="languageOptionEn" value="en">English</option>
+          <option id="languageOptionRu" value="ru">Russian</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label for="mathMode" id="mathModeLabel">Formula format in DOCX:</label>
         <select id="mathMode">
-          <option value="omml" selected>OMML (редактируемые)</option>
-          <option value="image">Изображения (для совместимости)</option>
+          <option id="mathModeOmml" value="omml" selected>OMML (editable)</option>
+          <option id="mathModeImage" value="image">Images (compatibility)</option>
         </select>
       </div>
       <div class="setting">
         <label>
           <input type="checkbox" id="showButtons" checked />
-          Показывать кнопки на странице ChatGPT
+          <span id="showButtonsLabel">Show buttons on ChatGPT page</span>
         </label>
       </div>
       <div class="setting">
         <label>
           <input type="checkbox" id="darkThemeDocx" />
-          Тёмная тема в DOCX
+          <span id="darkThemeDocxLabel">Dark theme in DOCX</span>
         </label>
       </div>
     </div>
 
     <div class="section">
-      <h2>Сохраненные промты</h2>
+      <h2 id="savedPromptsTitle">Saved Prompts</h2>
       <div class="prompt-input-group">
-        <input type="text" id="promptInput" class="prompt-input" placeholder="Введите промт и сохраните" />
-        <button id="btnSavePrompt" class="btn btn-secondary" title="Сохранить промт">
+        <input type="text" id="promptInput" class="prompt-input" placeholder="Type a prompt and save it" />
+        <button id="btnSavePrompt" class="btn btn-secondary" title="Save prompt">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M2 1h8l4 4v10H2V1z" stroke="currentColor" stroke-width="1.5"/>
             <line x1="8" y1="5" x2="8" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -90,11 +97,8 @@
     </div>
 
     <div class="section">
-      <h2>Подсказка</h2>
-      <p class="tip">
-        На странице ChatGPT при наведении на ответ появятся кнопки быстрого действия. 
-        Также можно выделить часть ответа и скопировать только выделенное.
-      </p>
+      <h2 id="tipTitle">Tip</h2>
+      <p id="tipText" class="tip">On the ChatGPT page, action buttons appear when you hover a response. You can also select part of a response and copy only the selected text.</p>
     </div>
 
     <div id="notification" class="notification hidden"></div>

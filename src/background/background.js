@@ -4,6 +4,7 @@
  */
 
 import { onInstalled, onMessage, storageSet, download } from '../lib/browser-api';
+import { getSystemLanguage } from '../lib/i18n';
 
 // Handle extension installation
 onInstalled((details) => {
@@ -13,6 +14,7 @@ onInstalled((details) => {
       showButtons: true,
       mathMode: 'omml',
       darkThemeDocx: false,
+      language: getSystemLanguage(),
     });
     console.log('[ChatGPT→Word Copier] Extension installed');
   }

@@ -4,6 +4,7 @@
  */
 
 import { storageGet, storageSet, tabsQuery, tabsSendMessage } from '../lib/browser-api';
+import { getSystemLanguage, normalizeLanguage, t } from '../lib/i18n';
 
 // DOM elements
 const btnCopy = document.getElementById('btnCopy');
@@ -12,6 +13,7 @@ const btnPdf = document.getElementById('btnPdf');
 const mathMode = document.getElementById('mathMode');
 const showButtons = document.getElementById('showButtons');
 const darkThemeDocx = document.getElementById('darkThemeDocx');
+const languageSelect = document.getElementById('languageSelect');
 const statusEl = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const notification = document.getElementById('notification');
@@ -19,6 +21,46 @@ const versionEl = document.querySelector('.version');
 const promptInput = document.getElementById('promptInput');
 const btnSavePrompt = document.getElementById('btnSavePrompt');
 const promptsList = document.getElementById('promptsList');
+
+let currentLanguage = 'en';
+let statusState = 'statusError';
+
+function tr(key) {
+  return t(currentLanguage, key);
+}
+
+function updateStatusText() {
+  statusText.textContent = tr(statusState);
+}
+
+function applyLanguage(language) {
+  currentLanguage = normalizeLanguage(language);
+  document.documentElement.lang = currentLanguage;
+
+  document.getElementById('actionsTitle').textContent = tr('actionsLastResponse');
+  document.getElementById('settingsTitle').textContent = tr('settings');
+  document.getElementById('languageLabel').textContent = `${tr('language')}:`;
+  document.getElementById('languageOptionEn').textContent = tr('languageEnglish');
+  document.getElementById('languageOptionRu').textContent = tr('languageRussian');
+  document.getElementById('btnCopyLabel').textContent = tr('copyForWord');
+  document.getElementById('btnDocxLabel').textContent = tr('downloadDocx');
+  document.getElementById('btnPdfLabel').textContent = tr('downloadPdf');
+  document.getElementById('mathModeLabel').textContent = tr('mathModeLabel');
+  document.getElementById('mathModeOmml').textContent = tr('mathModeOmml');
+  document.getElementById('mathModeImage').textContent = tr('mathModeImage');
+  document.getElementById('showButtonsLabel').textContent = tr('showButtons');
+  document.getElementById('darkThemeDocxLabel').textContent = tr('darkThemeDocx');
+  document.getElementById('savedPromptsTitle').textContent = tr('savedPrompts');
+  document.getElementById('tipTitle').textContent = tr('tipTitle');
+  document.getElementById('tipText').textContent = tr('tipText');
+  promptInput.placeholder = tr('promptPlaceholder');
+
+  btnCopy.title = tr('copyForWordTitle');
+  btnDocx.title = tr('downloadDocxTitle');
+  btnPdf.title = tr('downloadPdfTitle');
+  btnSavePrompt.title = tr('savePromptTitle');
+  updateStatusText();
+}
 
 // Load and display version from manifest
 try {
@@ -32,11 +74,30 @@ try {
 }
 
 // Load saved settings
-storageGet(['mathMode', 'showButtons', 'darkThemeDocx']).then((result) => {
+storageGet(['language', 'mathMode', 'showButtons', 'darkThemeDocx']).then((result) => {
+  const detectedLanguage = normalizeLanguage(result.language || getSystemLanguage());
+  if (languageSelect) {
+    languageSelect.value = detectedLanguage;
+  }
+  applyLanguage(detectedLanguage);
+
   if (result.mathMode) mathMode.value = result.mathMode;
   if (result.showButtons !== undefined) showButtons.checked = result.showButtons;
   if (result.darkThemeDocx !== undefined) darkThemeDocx.checked = result.darkThemeDocx;
+  renderPrompts();
+  checkStatus();
 }).catch(() => {});
+
+if (languageSelect) {
+  languageSelect.addEventListener('change', () => {
+    const selectedLanguage = normalizeLanguage(languageSelect.value);
+    applyLanguage(selectedLanguage);
+    storageSet({ language: selectedLanguage });
+    renderPrompts();
+    checkStatus();
+    sendToContent({ type: 'settingsChanged', settings: getSettings() }).catch(() => {});
+  });
+}
 
 // Save settings on change
 mathMode.addEventListener('change', () => {
@@ -55,6 +116,7 @@ darkThemeDocx.addEventListener('change', () => {
 
 function getSettings() {
   return {
+    language: currentLanguage,
     mathMode: mathMode.value,
     showButtons: showButtons.checked,
     darkThemeDocx: darkThemeDocx.checked,
@@ -68,24 +130,25 @@ async function checkStatus() {
     const tab = tabs[0];
     if (tab && (tab.url?.includes('chatgpt.com') || tab.url?.includes('chat.openai.com'))) {
       statusEl.className = 'status status-ok';
-      statusText.textContent = 'Расширение активно на ChatGPT';
+      statusState = 'statusActive';
+      updateStatusText();
       btnCopy.disabled = false;
       btnDocx.disabled = false;
       btnPdf.disabled = false;
     } else {
       statusEl.className = 'status status-error';
-      statusText.textContent = 'Откройте ChatGPT для работы';
+      statusState = 'statusOpenChatGpt';
+      updateStatusText();
       btnCopy.disabled = true;
       btnDocx.disabled = true;
       btnPdf.disabled = true;
     }
   } catch (e) {
     statusEl.className = 'status status-error';
-    statusText.textContent = 'Ошибка проверки статуса';
+    statusState = 'statusError';
+    updateStatusText();
   }
 }
-
-checkStatus();
 
 // Send message to content script
 async function sendToContent(message) {
@@ -95,7 +158,7 @@ async function sendToContent(message) {
     if (!tab) throw new Error('No active tab');
     return await tabsSendMessage(tab.id, message);
   } catch (e) {
-    showNotification('Ошибка: обновите страницу ChatGPT', 'error');
+    showNotification(tr('errRefreshPage'), 'error');
     throw e;
   }
 }
@@ -121,9 +184,9 @@ btnCopy.addEventListener('click', async () => {
   try {
     const response = await sendToContent({ type: 'copyForWord' });
     if (response?.success) {
-      showNotification('✓ Скопировано! Вставьте в Word (Ctrl+V)', 'success');
+      showNotification(tr('copiedToWord'), 'success');
     } else {
-      showNotification(response?.error || 'Не удалось скопировать', 'error');
+      showNotification(response?.error || tr('copyFailed'), 'error');
     }
   } catch (e) {
     console.error(e);
@@ -140,9 +203,9 @@ btnDocx.addEventListener('click', async () => {
       settings: getSettings(),
     });
     if (response?.success) {
-      showNotification('✓ DOCX файл загружен', 'success');
+      showNotification(tr('docxDownloaded'), 'success');
     } else {
-      showNotification(response?.error || 'Ошибка экспорта DOCX', 'error');
+      showNotification(response?.error || tr('docxExportFailed'), 'error');
     }
   } catch (e) {
     console.error(e);
@@ -156,9 +219,9 @@ btnPdf.addEventListener('click', async () => {
   try {
     const response = await sendToContent({ type: 'exportPdf' });
     if (response?.success) {
-      showNotification('✓ PDF файл загружен', 'success');
+      showNotification(tr('pdfDownloaded'), 'success');
     } else {
-      showNotification(response?.error || 'Ошибка экспорта PDF', 'error');
+      showNotification(response?.error || tr('pdfExportFailed'), 'error');
     }
   } catch (e) {
     console.error(e);
@@ -181,59 +244,75 @@ function savePrompts(prompts) {
 function renderPrompts() {
   loadPrompts().then((prompts) => {
     promptsList.innerHTML = '';
-    
+
     if (prompts.length === 0) {
-      promptsList.innerHTML = '<div class="prompts-empty">Нет сохраненных промтов</div>';
+      const empty = document.createElement('div');
+      empty.className = 'prompts-empty';
+      empty.textContent = tr('noSavedPrompts');
+      promptsList.appendChild(empty);
       return;
     }
-    
+
     prompts.forEach((prompt, index) => {
       const item = document.createElement('div');
       item.className = 'prompt-item';
-      item.innerHTML = `
-        <div class="prompt-text" title="${prompt}">Нажмите для копирования: ${prompt}</div>
-        <div class="prompt-actions">
-          <button class="btn-prompt-action btn-prompt-copy" title="Копировать">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <rect x="5" y="1" width="9" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
-              <rect x="2" y="3" width="9" height="12" rx="1" fill="white" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </button>
-          <button class="btn-prompt-action btn-prompt-delete" title="Удалить">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M2 4h12M3 4v9a1 1 0 001 1h8a1 1 0 001-1V4m-5 3v4m2-4v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
+
+      const promptText = document.createElement('div');
+      promptText.className = 'prompt-text';
+      promptText.title = prompt;
+      promptText.textContent = `${tr('promptClickToCopy')}: ${prompt}`;
+
+      const promptActions = document.createElement('div');
+      promptActions.className = 'prompt-actions';
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn-prompt-action btn-prompt-copy';
+      copyBtn.title = tr('copyTitle');
+      copyBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <rect x="5" y="1" width="9" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="2" y="3" width="9" height="12" rx="1" fill="white" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
       `;
-      
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn-prompt-action btn-prompt-delete';
+      deleteBtn.title = tr('deleteTitle');
+      deleteBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <path d="M2 4h12M3 4v9a1 1 0 001 1h8a1 1 0 001-1V4m-5 3v4m2-4v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      `;
+
+      promptActions.appendChild(copyBtn);
+      promptActions.appendChild(deleteBtn);
+      item.appendChild(promptText);
+      item.appendChild(promptActions);
+
       // Copy prompt to clipboard
-      const promptText = item.querySelector('.prompt-text');
       promptText.addEventListener('click', () => {
         navigator.clipboard.writeText(prompt).then(() => {
-          showNotification('✓ Промт скопирован', 'success');
+          showNotification(tr('promptCopied'), 'success');
         });
       });
-      
+
       // Copy button
-      const copyBtn = item.querySelector('.btn-prompt-copy');
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(prompt).then(() => {
-          showNotification('✓ Промт скопирован', 'success');
+          showNotification(tr('promptCopied'), 'success');
         });
       });
-      
+
       // Delete button
-      const deleteBtn = item.querySelector('.btn-prompt-delete');
       deleteBtn.addEventListener('click', () => {
         loadPrompts().then((currentPrompts) => {
           currentPrompts.splice(index, 1);
           savePrompts(currentPrompts);
           renderPrompts();
-          showNotification('✓ Промт удален', 'success');
+          showNotification(tr('promptDeleted'), 'success');
         });
       });
-      
+
       promptsList.appendChild(item);
     });
   });
@@ -242,31 +321,31 @@ function renderPrompts() {
 // Save new prompt
 function saveNewPrompt() {
   const promptText = promptInput.value.trim();
-  
+
   if (!promptText) {
-    showNotification('⚠ Введите промт', 'error');
+    showNotification(tr('enterPrompt'), 'error');
     return;
   }
-  
+
   if (promptText.length > 500) {
-    showNotification('⚠ Промт слишком длинный (макс. 500 символов)', 'error');
+    showNotification(tr('promptTooLong'), 'error');
     return;
   }
-  
+
   loadPrompts().then((prompts) => {
     // Avoid duplicates
     if (prompts.includes(promptText)) {
-      showNotification('⚠ Этот промт уже сохранен', 'error');
+      showNotification(tr('promptAlreadySaved'), 'error');
       return;
     }
-    
+
     prompts.unshift(promptText); // Add to beginning
     prompts = prompts.slice(0, 20); // Keep only last 20
-    
+
     savePrompts(prompts).then(() => {
       promptInput.value = '';
       renderPrompts();
-      showNotification('✓ Промт сохранен', 'success');
+      showNotification(tr('promptSaved'), 'success');
     });
   });
 }
@@ -278,5 +357,7 @@ promptInput.addEventListener('keypress', (e) => {
   }
 });
 
-// Initial render
+// Initial fallback render before storage resolves
+applyLanguage(getSystemLanguage());
 renderPrompts();
+checkStatus();
