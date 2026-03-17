@@ -7,21 +7,46 @@
  * Get all assistant message containers on the page
  */
 export function getAssistantMessages() {
-  // ChatGPT uses multiple possible selectors for messages
-  const selectors = [
-    '[data-message-author-role="assistant"]',
-    '[data-testid^="conversation-turn-"] .agent-turn',
-    '.markdown.prose',
-  ];
+  // Preferred: real assistant message containers
+  const assistantMessages = Array.from(
+    document.querySelectorAll('[data-message-author-role="assistant"]')
+  ).filter((el) => {
+    const markdown = el.querySelector('.markdown.prose, .markdown, [class*="markdown"]');
+    return markdown && markdown.textContent.trim().length > 0;
+  });
 
-  for (const sel of selectors) {
-    const elements = document.querySelectorAll(sel);
-    if (elements.length > 0) {
-      return Array.from(elements);
-    }
+  if (assistantMessages.length > 0) {
+    return assistantMessages;
   }
 
-  return [];
+  // Fallback: agent-turn containers that actually contain markdown
+  const agentTurns = Array.from(
+    document.querySelectorAll('[data-testid^="conversation-turn-"] .agent-turn')
+  ).filter((el) => {
+    const markdown = el.querySelector('.markdown.prose, .markdown, [class*="markdown"]');
+    return markdown && markdown.textContent.trim().length > 0;
+  });
+
+  if (agentTurns.length > 0) {
+    return agentTurns;
+  }
+
+  /**
+   * Last-resort fallback: standalone markdown blocks only
+   * Exclude markdown blocks nested inside assistant/agent containers,
+   * and skip blocks inside details/summary ("Thinking", "Думал..." etc.)
+   */ 
+  const markdownBlocks = Array.from(
+    document.querySelectorAll('.markdown.prose')
+  ).filter((el) => {
+    if (!el.textContent.trim()) return false;
+    if (el.closest('details, summary')) return false;
+    if (el.closest('[data-message-author-role="assistant"]')) return false;
+    if (el.closest('.agent-turn')) return false;
+    return true;
+  });
+
+  return markdownBlocks;
 }
 
 /**
