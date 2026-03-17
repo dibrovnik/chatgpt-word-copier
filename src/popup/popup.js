@@ -15,6 +15,18 @@ const darkThemeDocx = document.getElementById('darkThemeDocx');
 const statusEl = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const notification = document.getElementById('notification');
+const versionEl = document.querySelector('.version');
+
+// Load and display version from manifest
+try {
+  const manifest = chrome.runtime.getManifest();
+  if (versionEl) {
+    versionEl.textContent = `v${manifest.version}`;
+  }
+} catch (e) {
+  // Fallback if getManifest fails
+  console.warn('Could not load version from manifest:', e);
+}
 
 // Load saved settings
 storageGet(['mathMode', 'showButtons', 'darkThemeDocx']).then((result) => {
