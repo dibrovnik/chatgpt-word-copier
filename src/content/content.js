@@ -8,6 +8,7 @@ import { copyForWord, copyMessageForWord } from '../lib/clipboard-helper';
 import {
   getAssistantMessages,
   getLastAssistantMessage,
+  getUserMessages,
   extractContent,
   getMarkdownContent,
 } from '../lib/dom-extractor';
@@ -117,6 +118,9 @@ const PROCESSED_ATTR = 'data-word-copier-processed';
 function injectButtons() {
   // Process existing messages
   processMessages();
+  
+  // Inject prompt copy buttons for last 3 user messages
+  injectPromptCopyButtons();
 
   // Watch for new messages
   startObserver();
@@ -128,6 +132,9 @@ function removeButtons() {
 
   const processed = document.querySelectorAll(`[${PROCESSED_ATTR}]`);
   processed.forEach(el => el.removeAttribute(PROCESSED_ATTR));
+  
+  const promptProcessed = document.querySelectorAll('[data-prompt-copy-processed]');
+  promptProcessed.forEach(el => el.removeAttribute('data-prompt-copy-processed'));
 }
 
 function processMessages() {
@@ -229,6 +236,57 @@ function addButtonsToMessage(messageEl) {
   }
 }
 
+function injectPromptCopyButtons() {
+  const PROMPT_BUTTON_ATTR = 'data-prompt-copy-processed';
+  const userMessages = getUserMessages();
+  
+  // Get last 3 user messages
+  const lastThreeMessages = userMessages.slice(-3);
+  
+  lastThreeMessages.forEach((msgEl) => {
+    if (msgEl.hasAttribute(PROMPT_BUTTON_ATTR)) return;
+    msgEl.setAttribute(PROMPT_BUTTON_ATTR, 'true');
+    
+    const promptBtn = createActionButton(
+      'Копировать промт',
+      promptIcon(),
+      async () => {
+        promptBtn.classList.add('loading');
+        try {
+          const promptText = msgEl.textContent.trim();
+          if (!promptText) {
+            showToast('Пустое сообщение', 'error');
+            return;
+          }
+          
+          await navigator.clipboard.writeText(promptText);
+          showToast('✓ Промт скопирован в буфер обмена!', 'success');
+        } catch (e) {
+          showToast('Ошибка: ' + e.message, 'error');
+        } finally {
+          promptBtn.classList.remove('loading');
+        }
+      }
+    );
+    
+    // Find the content container and insert button
+    const content = msgEl.querySelector('[class*="message"], [class*="text"], div');
+    if (content) {
+      const buttonContainer = document.createElement('div');
+      buttonContainer.className = BUTTON_CONTAINER_CLASS;
+      buttonContainer.style.marginTop = '8px';
+      buttonContainer.appendChild(promptBtn);
+      
+      // Insert after message content
+      if (content.nextSibling) {
+        content.parentNode.insertBefore(buttonContainer, content.nextSibling);
+      } else {
+        content.parentNode.appendChild(buttonContainer);
+      }
+    }
+  });
+}
+
 function createActionButton(text, iconSvg, onClick) {
   const btn = document.createElement('button');
   btn.className = 'cgpt-wc-btn';
@@ -262,6 +320,14 @@ function pdfIcon() {
   return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M3 1h7l4 4v10H3V1z" stroke="currentColor" stroke-width="1.5"/>
     <text x="4.5" y="12" font-size="5.5" fill="currentColor" font-weight="bold" font-family="sans-serif">PDF</text>
+  </svg>`;
+}
+
+function promptIcon() {
+  return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 2h12l-1 4H3L2 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M3 6v8a1 1 0 001 1h8a1 1 0 001-1V6" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M6 9v3M10 9v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
   </svg>`;
 }
 

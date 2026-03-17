@@ -58,6 +58,20 @@ export function getLastAssistantMessage() {
 }
 
 /**
+ * Get all user message containers on the page
+ */
+export function getUserMessages() {
+  const userMessages = Array.from(
+    document.querySelectorAll('[data-message-author-role="user"]')
+  ).filter((el) => {
+    const content = el.textContent.trim();
+    return content.length > 0;
+  });
+
+  return userMessages;
+}
+
+/**
  * Get the markdown content container from a message element
  */
 export function getMarkdownContent(messageEl) {
