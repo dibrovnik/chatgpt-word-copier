@@ -37,6 +37,35 @@ body {
   color: #1a1a2e;
 }
 
+.header-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.lang-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lang-inline label {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.lang-inline select {
+  height: 24px;
+  padding: 2px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 11px;
+  background: white;
+  color: #374151;
+}
+
 .version {
   font-size: 11px;
   color: #9ca3af;

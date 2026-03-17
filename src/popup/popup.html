@@ -16,7 +16,16 @@
         </svg>
         <h1>ChatGPT → Word</h1>
       </div>
-      <span class="version">v1.0</span>
+      <div class="header-tools">
+        <div class="lang-inline">
+          <label for="languageSelect" id="languageLabel">Language:</label>
+          <select id="languageSelect">
+            <option id="languageOptionEn" value="en">English</option>
+            <option id="languageOptionRu" value="ru">Russian</option>
+          </select>
+        </div>
+        <span class="version">v1.0</span>
+      </div>
     </div>
 
     <div id="status" class="status status-ok">
@@ -53,13 +62,6 @@
 
     <div class="section">
       <h2 id="settingsTitle">Settings</h2>
-      <div class="setting">
-        <label for="languageSelect" id="languageLabel">Language:</label>
-        <select id="languageSelect">
-          <option id="languageOptionEn" value="en">English</option>
-          <option id="languageOptionRu" value="ru">Russian</option>
-        </select>
-      </div>
       <div class="setting">
         <label for="mathMode" id="mathModeLabel">Formula format in DOCX:</label>
         <select id="mathMode">
