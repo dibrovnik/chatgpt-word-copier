@@ -109,7 +109,10 @@ export function generatePdfViaPrint(messageEl) {
     'th { background: #f0f0f0; font-weight: 600; }' +
     'blockquote { border-left: 3px solid #ccc; padding-left: 12pt; margin: 8pt 0; color: #555; font-style: italic; }' +
     'ul, ol { margin: 4pt 0 8pt; padding-left: 24pt; }' +
-    'li { margin: 2pt 0; }' +
+    'ul { list-style-type: disc !important; list-style-position: outside !important; }' +
+    'ol { list-style-type: decimal !important; list-style-position: outside !important; }' +
+    'li { display: list-item !important; margin: 2pt 0; }' +
+    '.cgpt-pdf-marker { display: inline-block; min-width: 1.8em; font-weight: 600; white-space: pre; }' +
     'img { max-width: 100%; height: auto; }' +
     '.katex { font-size: 1em; }' +
     '.katex-display { margin: 8pt 0; text-align: center; }' +
@@ -228,7 +231,10 @@ function createPrintContainer(sourceContent) {
     'th { background: #f0f0f0; font-weight: 600; }' +
     'blockquote { border-left: 3px solid #ccc; padding-left: 12px; margin: 8px 0; color: #555; }' +
     'ul, ol { margin: 4px 0 8px; padding-left: 24px; }' +
-    'li { margin: 2px 0; }';
+    'ul { list-style-type: disc !important; list-style-position: outside !important; }' +
+    'ol { list-style-type: decimal !important; list-style-position: outside !important; }' +
+    'li { display: list-item !important; margin: 2px 0; }';
+    '.cgpt-pdf-marker { display: inline-block; min-width: 1.8em; font-weight: 600; white-space: pre; }' +
   container.appendChild(style);
   container.appendChild(clone);
 
