@@ -1,66 +1,9 @@
 /**
  * PDF Generator - exports ChatGPT responses as clean PDF files.
- * Uses html2canvas + jsPDF for blob-based rendering,
- * and a print-based approach with visible toolbar for user-initiated print/save.
+ * Uses a print-based approach with visible toolbar for user-initiated print/save.
  */
 
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { getMarkdownContent } from './dom-extractor';
-
-/**
- * Generate a PDF blob from a message element (automatic, no print dialog)
- * @param {HTMLElement} messageEl - The message container element
- * @returns {Promise<Blob>} - PDF as blob
- */
-export async function generatePdf(messageEl) {
-  const content = getMarkdownContent(messageEl);
-  if (!content) {
-    throw new Error('No content found');
-  }
-
-  // Create a clean container for rendering
-  const container = createPrintContainer(content);
-  document.body.appendChild(container);
-
-  try {
-    await new Promise(r => setTimeout(r, 500));
-
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width: container.scrollWidth,
-      height: container.scrollHeight,
-    });
-
-    const imgWidth = 190; // mm
-    const pageHeight = 277; // mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgData = canvas.toDataURL('image/png');
-
-    let heightLeft = imgHeight;
-    let position = 10;
-
-    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight + 10;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    return pdf.output('blob');
-  } finally {
-    document.body.removeChild(container);
-  }
-}
 
 /**
  * Generate PDF via print dialog with a visible toolbar (Download/Print + Close buttons).
@@ -193,52 +136,6 @@ function cleanContentForPdf(sourceContent) {
   }
 
   return clone.innerHTML;
-}
-
-/**
- * Create a clean print-ready container (for html2canvas approach)
- */
-function createPrintContainer(sourceContent) {
-  const container = document.createElement('div');
-  container.style.cssText =
-    'position: absolute; left: -9999px; top: 0; width: 720px; padding: 40px; ' +
-    'background: white; font-family: "Segoe UI", Calibri, Arial, sans-serif; ' +
-    'font-size: 14px; line-height: 1.6; color: #1a1a1a;';
-
-  // Clone and clean content
-  const clone = sourceContent.cloneNode(true);
-
-  // Remove interactive elements from clone
-  const removeSelectors = ['.sticky', '.cgpt-word-copier-buttons', 'button', '.select-none', '[aria-label]'];
-  for (const sel of removeSelectors) {
-    try {
-      const els = clone.querySelectorAll(sel);
-      for (const el of els) el.remove();
-    } catch (e) {}
-  }
-
-  const style = document.createElement('style');
-  style.textContent =
-    'h1 { font-size: 24px; font-weight: 600; margin: 16px 0 8px; }' +
-    'h2 { font-size: 20px; font-weight: 600; margin: 14px 0 6px; }' +
-    'h3 { font-size: 16px; font-weight: 600; margin: 12px 0 4px; }' +
-    'p { margin: 0 0 8px; }' +
-    'code { font-family: Consolas, monospace; font-size: 13px; background: #f5f5f5; padding: 1px 4px; border-radius: 3px; }' +
-    'pre { font-family: Consolas, monospace; font-size: 12px; background: #f8f8f8; padding: 12px; margin: 8px 0; border-radius: 4px; overflow: hidden; }' +
-    'pre code { background: none; padding: 0; }' +
-    'table { border-collapse: collapse; margin: 8px 0; width: 100%; }' +
-    'th, td { border: 1px solid #bbb; padding: 6px 10px; text-align: left; }' +
-    'th { background: #f0f0f0; font-weight: 600; }' +
-    'blockquote { border-left: 3px solid #ccc; padding-left: 12px; margin: 8px 0; color: #555; }' +
-    'ul, ol { margin: 4px 0 8px; padding-left: 24px; }' +
-    'ul { list-style-type: disc !important; list-style-position: outside !important; }' +
-    'ol { list-style-type: decimal !important; list-style-position: outside !important; }' +
-    'li { display: list-item !important; margin: 2px 0; }';
-    '.cgpt-pdf-marker { display: inline-block; min-width: 1.8em; font-weight: 600; white-space: pre; }' +
-  container.appendChild(style);
-  container.appendChild(clone);
-
-  return container;
 }
 
 /**

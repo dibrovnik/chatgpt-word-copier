@@ -208,7 +208,7 @@ chatgpt-word-copier/
 - **Chrome Extension Manifest V3** (Chrome/Edge/Brave) + **Manifest V2** (Firefox)
 - **esbuild** — сборка и бандлинг
 - **JSZip** — создание .docx (ZIP) файлов
-- **html2canvas + jsPDF** — генерация PDF
+- **Print API браузера** — экспорт в PDF через диалог печати
 - **Vanilla JS** — без фреймворков
 - **Кросс-браузерный слой** — `browser-api.js` нормализует `chrome.*` / `browser.*` API
 
