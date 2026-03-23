@@ -12,6 +12,7 @@ const btnDocx = document.getElementById('btnDocx');
 const btnPdf = document.getElementById('btnPdf');
 const mathMode = document.getElementById('mathMode');
 const showButtons = document.getElementById('showButtons');
+const gptButtonsLimit = document.getElementById('gptButtonsLimit');
 const darkThemeDocx = document.getElementById('darkThemeDocx');
 const languageSelect = document.getElementById('languageSelect');
 const statusEl = document.getElementById('status');
@@ -49,6 +50,7 @@ function applyLanguage(language) {
   document.getElementById('mathModeOmml').textContent = tr('mathModeOmml');
   document.getElementById('mathModeImage').textContent = tr('mathModeImage');
   document.getElementById('showButtonsLabel').textContent = tr('showButtons');
+  document.getElementById('gptButtonsLimitLabel').textContent = tr('gptButtonsLimitLabel');
   document.getElementById('darkThemeDocxLabel').textContent = tr('darkThemeDocx');
   document.getElementById('savedPromptsTitle').textContent = tr('savedPrompts');
   document.getElementById('tipTitle').textContent = tr('tipTitle');
@@ -74,7 +76,7 @@ try {
 }
 
 // Load saved settings
-storageGet(['language', 'mathMode', 'showButtons', 'darkThemeDocx']).then((result) => {
+storageGet(['language', 'mathMode', 'showButtons', 'gptButtonsLimit', 'darkThemeDocx']).then((result) => {
   const detectedLanguage = normalizeLanguage(result.language || getSystemLanguage());
   if (languageSelect) {
     languageSelect.value = detectedLanguage;
@@ -83,6 +85,7 @@ storageGet(['language', 'mathMode', 'showButtons', 'darkThemeDocx']).then((resul
 
   if (result.mathMode) mathMode.value = result.mathMode;
   if (result.showButtons !== undefined) showButtons.checked = result.showButtons;
+  if (gptButtonsLimit) gptButtonsLimit.value = String(normalizeGptButtonsLimit(result.gptButtonsLimit));
   if (result.darkThemeDocx !== undefined) darkThemeDocx.checked = result.darkThemeDocx;
   renderPrompts();
   checkStatus();
@@ -114,13 +117,31 @@ darkThemeDocx.addEventListener('change', () => {
   storageSet({ darkThemeDocx: darkThemeDocx.checked });
 });
 
+if (gptButtonsLimit) {
+  const onLimitChanged = () => {
+    const value = normalizeGptButtonsLimit(gptButtonsLimit.value);
+    gptButtonsLimit.value = String(value);
+    storageSet({ gptButtonsLimit: value });
+    sendToContent({ type: 'settingsChanged', settings: getSettings() }).catch(() => {});
+  };
+  gptButtonsLimit.addEventListener('change', onLimitChanged);
+  gptButtonsLimit.addEventListener('blur', onLimitChanged);
+}
+
 function getSettings() {
   return {
     language: currentLanguage,
     mathMode: mathMode.value,
     showButtons: showButtons.checked,
+    gptButtonsLimit: normalizeGptButtonsLimit(gptButtonsLimit?.value),
     darkThemeDocx: darkThemeDocx.checked,
   };
+}
+
+function normalizeGptButtonsLimit(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed < 0) return 0;
+  return Math.min(parsed, 200);
 }
 
 // Check if we're on a ChatGPT page
@@ -260,7 +281,7 @@ function renderPrompts() {
       const promptText = document.createElement('div');
       promptText.className = 'prompt-text';
       promptText.title = prompt;
-      promptText.textContent = `${tr('promptClickToCopy')}: ${prompt}`;
+      promptText.textContent = prompt;
 
       const promptActions = document.createElement('div');
       promptActions.className = 'prompt-actions';

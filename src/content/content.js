@@ -20,15 +20,17 @@ import { getSystemLanguage, t } from '../lib/i18n';
 // Settings
 let settings = {
   showButtons: true,
+  gptButtonsLimit: 0,
   mathMode: 'omml',
   darkThemeDocx: false,
   language: getSystemLanguage(),
 };
 
 // Load settings
-storageGet(['showButtons', 'mathMode', 'darkThemeDocx', 'language']).then((result) => {
+storageGet(['showButtons', 'gptButtonsLimit', 'mathMode', 'darkThemeDocx', 'language']).then((result) => {
   if (result) {
     settings = { ...settings, ...result };
+    settings.gptButtonsLimit = normalizeGptButtonsLimit(settings.gptButtonsLimit);
     if (settings.showButtons) {
       injectButtons();
     }
@@ -62,6 +64,7 @@ async function handleMessage(message) {
       {
       const previousLanguage = settings.language;
       settings = { ...settings, ...message.settings };
+      settings.gptButtonsLimit = normalizeGptButtonsLimit(settings.gptButtonsLimit);
       if (settings.showButtons) {
         if (previousLanguage !== settings.language) {
           removeButtons();
@@ -151,11 +154,39 @@ function removeButtons() {
 
 function processMessages() {
   const messages = getAssistantMessages();
+  const limit = normalizeGptButtonsLimit(settings.gptButtonsLimit);
+  const limitedMessages = limit > 0 ? new Set(messages.slice(-limit)) : null;
+
   for (const msg of messages) {
-    if (msg.hasAttribute(PROCESSED_ATTR)) continue;
+    const shouldRenderButtons = !limitedMessages || limitedMessages.has(msg);
+
+    if (!shouldRenderButtons) {
+      removeButtonsFromMessage(msg);
+      msg.removeAttribute(PROCESSED_ATTR);
+      continue;
+    }
+
+    if (msg.hasAttribute(PROCESSED_ATTR) && messageHasButtons(msg)) continue;
+
     msg.setAttribute(PROCESSED_ATTR, 'true');
+    removeButtonsFromMessage(msg);
     addButtonsToMessage(msg);
   }
+}
+
+function normalizeGptButtonsLimit(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed < 0) return 0;
+  return Math.min(parsed, 200);
+}
+
+function messageHasButtons(messageEl) {
+  return Boolean(messageEl.querySelector(`.${BUTTON_CONTAINER_CLASS}`));
+}
+
+function removeButtonsFromMessage(messageEl) {
+  const containers = messageEl.querySelectorAll(`.${BUTTON_CONTAINER_CLASS}`);
+  containers.forEach((container) => container.remove());
 }
 
 function addButtonsToMessage(messageEl) {
@@ -240,7 +271,6 @@ function addButtonsToMessage(messageEl) {
   container.appendChild(pdfBtn);
 
   // Insert buttons under the GPT response
-  const target = contentEl.parentElement || contentEl;
   if (contentEl.nextSibling) {
     contentEl.parentNode.insertBefore(container, contentEl.nextSibling);
   } else {
@@ -392,20 +422,17 @@ function startObserver() {
   if (observer) return;
 
   observer = new MutationObserver((mutations) => {
-    let shouldProcess = false;
-    for (const mutation of mutations) {
-      if (mutation.addedNodes.length > 0) {
-        shouldProcess = true;
-        break;
-      }
-    }
+    const shouldProcess = mutations.some((mutation) =>
+      hasRelevantAddedOrRemovedNode(mutation.addedNodes) || hasRelevantAddedOrRemovedNode(mutation.removedNodes)
+    );
+
     if (shouldProcess) {
       // Debounce
       clearTimeout(startObserver._timeout);
       startObserver._timeout = setTimeout(() => {
         processMessages();
         syncPromptCopyButtons();
-      }, 500);
+      }, 250);
     }
   });
 
@@ -413,6 +440,25 @@ function startObserver() {
     childList: true,
     subtree: true,
   });
+}
+
+function hasRelevantAddedOrRemovedNode(nodeList) {
+  for (const node of nodeList) {
+    if (nodeCouldAffectButtons(node)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function nodeCouldAffectButtons(node) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+    return false;
+  }
+
+  const selector = '[data-message-author-role="assistant"], [data-message-author-role="user"], [data-testid^="conversation-turn-"], .agent-turn, .markdown, [class*="markdown"]';
+  const el = /** @type {Element} */ (node);
+  return el.matches(selector) || Boolean(el.querySelector(selector));
 }
 
 // ===== Utility Functions =====
