@@ -7,11 +7,17 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
     name: Build & Publish Release
     runs-on: ubuntu-latest
+
+    env:
+      CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+      CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,10 +27,8 @@ jobs:
           cache: npm
 
       - run: npm ci
-
       - run: npm test
 
-      # Extract version from tag
       - name: Extract version
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
@@ -36,6 +40,41 @@ jobs:
         run: |
           cd dist
           zip -r ../chatgpt-word-copier-v${{ steps.version.outputs.version }}.zip . -x '.*'
+
+      # ── Auth to Google ──
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'
+          token_format: 'access_token'
+          access_token_scopes: 'https://www.googleapis.com/auth/chromewebstore'
+
+      # ── Upload Chrome package ──
+      - name: Upload to Chrome Web Store
+        run: |
+          curl --fail-with-body -X POST \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Type: application/zip" \
+            --data-binary @chatgpt-word-copier-v${{ steps.version.outputs.version }}.zip \
+            "https://chromewebstore.googleapis.com/upload/v2/publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}:upload"
+
+      # ── Publish Chrome extension ──
+      - name: Publish in Chrome Web Store
+        run: |
+          curl --fail-with-body -X POST \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
+            -H "Content-Type: application/json" \
+            -d '{"publishType":"DEFAULT_PUBLISH"}' \
+            "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}:publish"
+
+      # ── Optional: check status ──
+      - name: Check Chrome Web Store status
+        run: |
+          curl --fail-with-body \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
+            "https://chromewebstore.googleapis.com/v2/publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}:fetchStatus"
 
       # ── Firefox build ──
       - run: npm run build:firefox
