@@ -257,7 +257,7 @@ function addButtonsToMessage(messageEl) {
       pdfBtn.classList.add('loading');
       try {
         generatePdfViaPrint(messageEl);
-        showToast(tr('pdfReadyToPrint'), 'success');
+        showToast(tr('pdfReadyActions'), 'success');
       } catch (e) {
         showToast(`${tr('errorPrefix')}: ${e.message}`, 'error');
       } finally {

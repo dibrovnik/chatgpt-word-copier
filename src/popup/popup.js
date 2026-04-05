@@ -240,7 +240,7 @@ btnPdf.addEventListener('click', async () => {
   try {
     const response = await sendToContent({ type: 'exportPdf' });
     if (response?.success) {
-      showNotification(tr('pdfDownloaded'), 'success');
+      showNotification(tr('pdfReadyActions'), 'success');
     } else {
       showNotification(response?.error || tr('pdfExportFailed'), 'error');
     }
