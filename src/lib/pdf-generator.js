@@ -153,15 +153,18 @@ export async function generatePdfDirectDownload(messageEl) {
     await waitForImages(renderRoot);
     await waitNextFrame();
 
-    const canvas = await html2canvas(renderRoot, {
-      scale: Math.min(2, window.devicePixelRatio || 2),
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: renderRoot.scrollWidth,
-      windowHeight: renderRoot.scrollHeight,
-    });
+    const canvas = await Promise.race([
+      html2canvas(renderRoot, {
+        scale: Math.min(2, window.devicePixelRatio || 2),
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: renderRoot.scrollWidth,
+        windowHeight: renderRoot.scrollHeight,
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('html2canvas timeout')), 15000))
+    ]);
 
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -341,8 +344,19 @@ function waitForImages(root) {
             resolve();
             return;
           }
-          img.addEventListener('load', () => resolve(), { once: true });
-          img.addEventListener('error', () => resolve(), { once: true });
+          
+          let resolved = false;
+          const finish = () => {
+            if (resolved) return;
+            resolved = true;
+            resolve();
+          };
+
+          img.addEventListener('load', finish, { once: true });
+          img.addEventListener('error', finish, { once: true });
+          
+          // Fallback timeout in case image never fires load/error
+          setTimeout(finish, 5000);
         })
     )
   );
@@ -350,7 +364,9 @@ function waitForImages(root) {
 
 function waitNextFrame() {
   return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve());
+    // requestAnimationFrame could hang if the original tab is hidden. 
+    // We use setTimeout to ensure it reliably resolves even in inactive tabs.
+    setTimeout(() => resolve(), 100);
   });
 }
 
