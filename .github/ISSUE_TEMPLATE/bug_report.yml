@@ -1,0 +1,45 @@
+name: Bug Report
+description: Create a report to help us improve the ChatGPT Word Copier extension
+title: "[BUG] "
+labels: ["bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: How do we trigger this bug?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & Version
+      description: e.g., Chrome 120, Firefox 115
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: e.g., Windows 11, macOS Sonoma
+    validations:
+      required: true
