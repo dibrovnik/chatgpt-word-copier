@@ -90,9 +90,10 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'
-          token_format: 'access_token'
-          access_token_scopes: 'https://www.googleapis.com/auth/chromewebstore'
+          workload_identity_provider: projects/257412020203/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: chrome-deploy@chatgpt-word-copier.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
 
       # ── Upload Chrome package ──
       - name: Upload to Chrome Web Store
