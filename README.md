@@ -6,6 +6,7 @@
   ⭐️ <strong>If you find this extension helpful, please give it a ⭐️ on GitHub! It helps others find the project.</strong> ⭐️
 </div>
 
+
 <p align="left">
   <a href="https://github.com/dibrovnik/chatgpt-word-copier/actions/workflows/ci.yml"><img src="https://github.com/dibrovnik/chatgpt-word-copier/actions/workflows/ci.yml/badge.svg" alt="CI — Build & Test"></a>
   <a href="https://github.com/dibrovnik/chatgpt-word-copier/actions/workflows/release.yml"><img src="https://github.com/dibrovnik/chatgpt-word-copier/actions/workflows/release.yml/badge.svg" alt="Release"></a>
