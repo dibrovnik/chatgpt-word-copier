@@ -409,3 +409,100 @@ describe('DOM Extractor - Complex Document', () => {
     expect(blocks[4].content[0].type).toBe('bold');
   });
 });
+
+// ===== Citation / Source filtering =====
+
+describe('DOM Extractor - Citation and Source Filtering', () => {
+  it('should skip inline citation superscripts (sup > a)', () => {
+    const blocks = extract(`
+      <p>Some text<sup><a href="https://example.com">1</a></sup> after citation.</p>
+    `);
+    expect(blocks).toHaveLength(1);
+    // The citation marker [1] should not appear in the extracted content
+    const allText = blocks[0].content.map(c => c.text || '').join('');
+    expect(allText).not.toContain('1');
+    // Plain text around the citation should still be present
+    expect(allText).toContain('Some text');
+  });
+
+  it('should keep math superscripts (sup without links)', () => {
+    const blocks = extract('<p>x<sup>2</sup></p>');
+    const items = blocks[0].content;
+    const supItem = items.find(c => c.type === 'superscript');
+    expect(supItem).toBeDefined();
+    expect(supItem.text).toBe('2');
+  });
+
+  it('should skip source section divs with data-testid containing "citation"', () => {
+    const blocks = extract(`
+      <p>Main content.</p>
+      <div data-testid="oai-citations-list">
+        <ol><li><a href="https://example.com">Source 1</a></li></ol>
+      </div>
+    `);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('paragraph');
+    expect(blocks[0].content[0].text).toBe('Main content.');
+  });
+
+  it('should skip source section divs with data-testid containing "source"', () => {
+    const blocks = extract(`
+      <p>Main content.</p>
+      <div data-testid="source-attribution">
+        <p>Source: Wikipedia</p>
+      </div>
+    `);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('paragraph');
+  });
+
+  it('should skip divs with class containing "citation"', () => {
+    const blocks = extract(`
+      <p>Main content.</p>
+      <div class="citation-block">
+        <a href="https://example.com">Source 1</a>
+      </div>
+    `);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('paragraph');
+  });
+
+  it('should remove inline citation sups from getCleanHtmlWithMathML output', () => {
+    const msg = makeMessage(`
+      <p>Some text<sup><a href="https://example.com">1</a></sup> more text.</p>
+    `);
+    const html = getCleanHtmlWithMathML(msg);
+    msg.remove();
+
+    expect(html).toContain('Some text');
+    expect(html).toContain('more text');
+    // The <sup> citation marker should have been removed
+    expect(html).not.toMatch(/<sup[^>]*><a/);
+  });
+
+  it('should remove source section blocks from getCleanHtmlWithMathML output', () => {
+    const msg = makeMessage(`
+      <p>Main content.</p>
+      <div data-testid="oai-citations-list">
+        <ol><li><a href="https://example.com">Source 1</a></li></ol>
+      </div>
+    `);
+    const html = getCleanHtmlWithMathML(msg);
+    msg.remove();
+
+    expect(html).toContain('Main content');
+    expect(html).not.toContain('Source 1');
+  });
+
+  it('should handle multiple citation markers in one paragraph', () => {
+    const blocks = extract(`
+      <p>First<sup><a href="https://a.com">1</a></sup> and second<sup><a href="https://b.com">2</a></sup> refs.</p>
+    `);
+    expect(blocks).toHaveLength(1);
+    const allText = blocks[0].content.map(c => c.text || '').join('');
+    expect(allText).not.toContain('1');
+    expect(allText).not.toContain('2');
+    expect(allText).toContain('First');
+    expect(allText).toContain('and second');
+  });
+});

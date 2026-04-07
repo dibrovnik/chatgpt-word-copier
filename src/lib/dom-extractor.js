@@ -3,6 +3,19 @@
  * Handles the ChatGPT DOM structure to find assistant responses.
  */
 
+// Regex patterns for citation/source block detection (compiled once at module level)
+const RE_CITATION_TESTID = /citation|source/i;
+const RE_CITATION_CLASS = /\bcitation\b|\bsource[-_]list\b|\bfootnote\b/i;
+
+// Combined CSS selector for source/citation section blocks used in getCleanHtmlWithMathML
+const CITATION_BLOCK_SELECTOR = [
+  '[data-testid*="citation"]',
+  '[data-testid*="source"]',
+  '[class*="citation"]',
+  '[class*="source-list"]',
+  '[class*="footnote"]',
+].join(',');
+
 /**
  * Get all assistant message containers on the page
  */
@@ -198,6 +211,9 @@ function parseElement(el) {
     if (el.classList.contains('sticky')) return null;
     if (el.querySelector(':scope > button[aria-label]') && !el.querySelector(':scope > p, :scope > table, :scope > h1, :scope > h2, :scope > h3')) return null;
 
+    // Skip ChatGPT source/citation section blocks
+    if (isCitationBlock(el)) return null;
+
     // Check for math display
     const katexDisplay = el.querySelector('.katex-display');
     if (katexDisplay) {
@@ -226,6 +242,22 @@ function parseElement(el) {
   }
 
   return null;
+}
+
+/**
+ * Detect ChatGPT source/citation section blocks that should be excluded
+ * from extracted content (e.g. web-search source listings).
+ * Checks for known data-testid attributes and class name patterns.
+ */
+function isCitationBlock(el) {
+  const testid = el.getAttribute('data-testid') || '';
+  if (RE_CITATION_TESTID.test(testid)) return true;
+
+  // Class-based heuristics for common ChatGPT source-section wrappers
+  const className = el.className || '';
+  if (RE_CITATION_CLASS.test(className)) return true;
+
+  return false;
 }
 
 /**
@@ -291,6 +323,9 @@ export function extractInlineContent(el) {
 
     // Superscript
     if (tag === 'sup') {
+      // Skip citation markers: ChatGPT web search inserts numbered references
+      // as <sup><a href="...">1</a></sup> — these should not appear in copied text
+      if (node.querySelector('a')) return;
       items.push({ type: 'superscript', text: node.textContent });
       return;
     }
@@ -483,6 +518,21 @@ export function getCleanHtmlWithMathML(messageEl) {
     for (const el of elements) {
       el.remove();
     }
+  }
+
+  // Remove inline citation markers: <sup><a href="...">1</a></sup>
+  // ChatGPT web search inserts these numbered references into the text.
+  const citationSups = clone.querySelectorAll('sup');
+  for (const sup of citationSups) {
+    if (sup.querySelector('a')) {
+      sup.remove();
+    }
+  }
+
+  // Remove source/citation section blocks (web-search source listings)
+  const citationBlocks = clone.querySelectorAll(CITATION_BLOCK_SELECTOR);
+  for (const el of citationBlocks) {
+    el.remove();
   }
 
   // Clean up code block headers (ChatGPT adds copy buttons etc.)
