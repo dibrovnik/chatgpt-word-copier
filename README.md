@@ -13,7 +13,7 @@
   <a href="https://github.com/dibrovnik/chatgpt-word-copier/releases/latest"><img src="https://img.shields.io/github/v/release/dibrovnik/chatgpt-word-copier?label=release&logo=github" alt="GitHub Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <br>
-  <a href="https://chromewebstore.google.com/detail/chatgpt-%E2%86%92-word-copier/jebfnecffngjbiapaholakanfcoeajfo"><img src="https://img.shields.io/chrome-web-store/v/jebfnecffngjbiapaholakanfcoeajfo?label=Chrome%20Web%20Store&logo=googlechrome&color=blue&logoColor=white" alt="Chrome Web Store"></a>
+  <a href="https://chromewebstore.google.com/detail/chatgpt-%E2%86%92-word-copier/jebfnecffngjbiapaholakanfcoeajfo"><img src="https://img.shields.io/badge/Chrome%20Web%20Store-install-blue?logo=googlechrome&logoColor=white" alt="Chrome Web Store"></a>
   <a href="https://addons.mozilla.org/ru/firefox/addon/chatgpt-word-copier/"><img src="https://img.shields.io/amo/v/chatgpt-word-copier?label=Firefox%20Add-ons&logo=firefox&color=FF7139&logoColor=white" alt="Firefox Add-ons"></a>
 </p>
 
