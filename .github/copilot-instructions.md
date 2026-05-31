@@ -6,7 +6,7 @@
 - **DOM Manipulations**: Prefer explicit DOM querying and manipulation when interacting with ChatGPT's UI (e.g., checking `data-message-author-role`).
 
 ## Architecture
-This is a cross-browser extension (Chrome MV3 and Firefox MV3) utilizing a three-layer architecture:
+This is a cross-browser extension (Chrome MV3 and Firefox MV2) utilizing a three-layer architecture:
 - **Content Scripts (`src/content/`)**: Injected into ChatGPT pages. Handles UI elements (copy/export buttons) and extracts content/DOM.
 - **Background Worker (`src/background/`)**: Manages downloads and cross-script messaging.
 - **Popup UI (`src/popup/`)**: Manages user settings (math mode, theme, language).

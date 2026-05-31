@@ -29,8 +29,8 @@
     "web-ext": "^9.3.0"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
-    "jszip": "^3.10.1"
+    "html-to-pdfmake": "^2.5.33",
+    "jszip": "^3.10.1",
+    "pdfmake": "^0.3.9"
   }
 }

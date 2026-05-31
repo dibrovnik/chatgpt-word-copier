@@ -1,6 +1,7 @@
 import * as esbuild from 'esbuild';
 import fs from 'fs';
 import path from 'path';
+import { pdfmakeMv3Plugin } from './pdfmake-mv3-plugin.mjs';
 
 const isWatch = process.argv.includes('--watch');
 const isFirefox = process.argv.includes('--firefox');
@@ -77,6 +78,7 @@ async function build() {
       define: {
         'process.env.NODE_ENV': isWatch ? '"development"' : '"production"',
       },
+      plugins: [pdfmakeMv3Plugin()],
     };
 
     if (isWatch) {

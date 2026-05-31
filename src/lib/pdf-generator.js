@@ -3,13 +3,15 @@
  * Supports both direct download and print flow.
  */
 
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import pdfMake from 'pdfmake/build/pdfmake.js';
+import pdfFonts from 'pdfmake/build/vfs_fonts.js';
 import { getMarkdownContent } from './dom-extractor';
+import { buildPdfDocumentDefinition, cleanContentForPdf } from './pdf-document';
 
 const PDF_WORDS_LIMIT = 5;
 const PDF_FALLBACK_WORDS = 'chatgpt-response';
 const PDF_MAX_WORDS_PART_LENGTH = 80;
+let isPdfMakeConfigured = false;
 
 /**
  * Generate PDF preview window with toolbar buttons (direct download + print + close).
@@ -85,8 +87,9 @@ export function generatePdfViaPrint(messageEl) {
     '<body>' +
     '<div class="pdf-toolbar">' +
     '<span class="pdf-toolbar-title">ChatGPT Response</span>' +
-    '<button class="pdf-btn-primary" id="pdf-download-btn">&#11015; \u0421\u043A\u0430\u0447\u0430\u0442\u044C PDF</button>' +
-    '<button class="pdf-btn-secondary" id="pdf-print-btn">&#128424; \u041F\u0435\u0447\u0430\u0442\u044C</button>' +
+    // Temporarily hidden while direct PDF download is disabled.
+    // '<button class="pdf-btn-primary" id="pdf-download-btn">&#11015; \u0421\u043A\u0430\u0447\u0430\u0442\u044C PDF</button>' +
+    '<button class="pdf-btn-secondary" id="pdf-print-btn">&#128424; \u041F\u0435\u0447\u0430\u0442\u044C \u0438\u043B\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C</button>' +
     '<button class="pdf-btn-secondary" id="pdf-close-btn">\u0417\u0430\u043A\u0440\u044B\u0442\u044C</button>' +
     '</div>' +
     '<div class="pdf-content">' +
@@ -144,60 +147,12 @@ export async function generatePdfDirectDownload(messageEl) {
     throw new Error('No content found');
   }
 
-  const cleanHtml = cleanContentForPdf(content);
-  const renderRoot = createPdfRenderRoot(cleanHtml);
   const filename = buildPdfFilename(messageEl);
-  document.body.appendChild(renderRoot);
+  const docDefinition = buildPdfDocumentDefinition(content, window);
 
-  try {
-    await waitForImages(renderRoot);
-    await waitNextFrame();
-
-    const canvas = await Promise.race([
-      html2canvas(renderRoot, {
-        scale: Math.min(2, window.devicePixelRatio || 2),
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-        windowWidth: renderRoot.scrollWidth,
-        windowHeight: renderRoot.scrollHeight,
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('html2canvas timeout')), 15000))
-    ]);
-
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-      compress: true,
-    });
-
-    const pageMarginMm = 10;
-    const pageWidthMm = pdf.internal.pageSize.getWidth() - pageMarginMm * 2;
-    const pageHeightMm = pdf.internal.pageSize.getHeight() - pageMarginMm * 2;
-    const imageWidthMm = pageWidthMm;
-    const imageHeightMm = (canvas.height * imageWidthMm) / canvas.width;
-    const imageData = canvas.toDataURL('image/png');
-
-    let heightLeftMm = imageHeightMm;
-    let positionMm = pageMarginMm;
-
-    pdf.addImage(imageData, 'PNG', pageMarginMm, positionMm, imageWidthMm, imageHeightMm, undefined, 'FAST');
-    heightLeftMm -= pageHeightMm;
-
-    while (heightLeftMm > 0) {
-      positionMm = pageMarginMm - (imageHeightMm - heightLeftMm);
-      pdf.addPage();
-      pdf.addImage(imageData, 'PNG', pageMarginMm, positionMm, imageWidthMm, imageHeightMm, undefined, 'FAST');
-      heightLeftMm -= pageHeightMm;
-    }
-
-    pdf.save(filename);
-    return filename;
-  } finally {
-    renderRoot.remove();
-  }
+  configurePdfMake();
+  await pdfMake.createPdf(docDefinition).download(filename);
+  return filename;
 }
 
 /**
@@ -207,40 +162,6 @@ export function buildPdfFilename(messageEl) {
   const timestampPart = getTimestampForFilename();
   const firstWordsPart = getFirstWordsForFilename(messageEl);
   return `${timestampPart}_${firstWordsPart}.pdf`;
-}
-
-/**
- * Clone content and remove all ChatGPT interactive elements
- * (copy buttons on tables, code block header buttons, our own injected buttons, etc.)
- */
-function cleanContentForPdf(sourceContent) {
-  const clone = sourceContent.cloneNode(true);
-
-  // Selectors for interactive/non-content elements to remove
-  const removeSelectors = [
-    '.sticky',                                // Table copy button containers
-    '.cgpt-word-copier-buttons',              // Our injected buttons
-    'button',                                 // All buttons (copy, etc.)
-    '[data-testid*="button"]',                // Testid-based buttons
-    '.absolute.end-0',                        // Absolute-positioned utility wrappers
-    '.code-block-header',                     // Code block header with copy button
-    'svg.icon',                               // Standalone icon SVGs
-    '[aria-label]',                           // All labeled interactive elements
-    '.select-none',                           // Non-selectable utility elements (e.g., sticky wrappers)
-  ];
-
-  for (const sel of removeSelectors) {
-    try {
-      const elements = clone.querySelectorAll(sel);
-      for (const el of elements) {
-        el.remove();
-      }
-    } catch (e) {
-      // Ignore invalid selectors
-    }
-  }
-
-  return clone.innerHTML;
 }
 
 function getFirstWordsForFilename(messageEl) {
@@ -285,89 +206,12 @@ function escapeHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
-function createPdfRenderRoot(cleanHtml) {
-  const root = document.createElement('div');
-  root.setAttribute('aria-hidden', 'true');
-  root.style.position = 'fixed';
-  root.style.left = '-100000px';
-  root.style.top = '0';
-  root.style.width = '794px';
-  root.style.background = '#ffffff';
-  root.style.zIndex = '-1';
-  root.style.pointerEvents = 'none';
+function configurePdfMake() {
+  if (isPdfMakeConfigured) return;
 
-  root.innerHTML =
-    '<style>' +
-    '.cgpt-pdf-export { font-family: "Segoe UI", Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a; padding: 20px 40px 60px; max-width: 800px; }' +
-    '.cgpt-pdf-export * { box-sizing: border-box; }' +
-    '.cgpt-pdf-export h1 { font-size: 20pt; font-weight: 600; margin: 16pt 0 8pt; color: #1a1a2e; }' +
-    '.cgpt-pdf-export h2 { font-size: 16pt; font-weight: 600; margin: 14pt 0 6pt; color: #1a1a2e; }' +
-    '.cgpt-pdf-export h3 { font-size: 13pt; font-weight: 600; margin: 12pt 0 4pt; color: #1a1a2e; }' +
-    '.cgpt-pdf-export h4 { font-size: 11pt; font-weight: 600; margin: 10pt 0 4pt; }' +
-    '.cgpt-pdf-export p { margin: 0 0 8pt; }' +
-    '.cgpt-pdf-export strong { font-weight: 600; }' +
-    '.cgpt-pdf-export em { font-style: italic; }' +
-    '.cgpt-pdf-export code { font-family: Consolas, "Courier New", monospace; font-size: 9.5pt; background: #f5f5f5; padding: 1px 4px; border-radius: 3px; border: 1px solid #e0e0e0; }' +
-    '.cgpt-pdf-export pre { font-family: Consolas, "Courier New", monospace; font-size: 9pt; background: #f8f8f8; padding: 10pt; margin: 8pt 0; border: 1px solid #e0e0e0; border-radius: 4pt; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }' +
-    '.cgpt-pdf-export pre code { background: none; border: none; padding: 0; }' +
-    '.cgpt-pdf-export table { border-collapse: collapse; margin: 8pt 0; width: 100%; font-size: 10pt; }' +
-    '.cgpt-pdf-export th, .cgpt-pdf-export td { border: 1px solid #bbb; padding: 6pt 10pt; text-align: left; }' +
-    '.cgpt-pdf-export th { background: #f0f0f0; font-weight: 600; }' +
-    '.cgpt-pdf-export blockquote { border-left: 3px solid #ccc; padding-left: 12pt; margin: 8pt 0; color: #555; font-style: italic; }' +
-    '.cgpt-pdf-export ul, .cgpt-pdf-export ol { margin: 4pt 0 8pt; padding-left: 24pt; }' +
-    '.cgpt-pdf-export ul { list-style-type: disc !important; list-style-position: outside !important; }' +
-    '.cgpt-pdf-export ol { list-style-type: decimal !important; list-style-position: outside !important; }' +
-    '.cgpt-pdf-export li { display: list-item !important; margin: 2pt 0; }' +
-    '.cgpt-pdf-export .cgpt-pdf-marker { display: inline-block; min-width: 1.8em; font-weight: 600; white-space: pre; }' +
-    '.cgpt-pdf-export img { max-width: 100%; height: auto; }' +
-    '.cgpt-pdf-export .katex { font-size: 1em; }' +
-    '.cgpt-pdf-export .katex-display { margin: 8pt 0; text-align: center; }' +
-    '</style>' +
-    '<div class="cgpt-pdf-export">' +
-    cleanHtml +
-    '</div>';
-
-  return root;
-}
-
-function waitForImages(root) {
-  const images = Array.from(root.querySelectorAll('img'));
-  if (images.length === 0) {
-    return Promise.resolve();
-  }
-
-  return Promise.all(
-    images.map(
-      (img) =>
-        new Promise((resolve) => {
-          if (img.complete) {
-            resolve();
-            return;
-          }
-          
-          let resolved = false;
-          const finish = () => {
-            if (resolved) return;
-            resolved = true;
-            resolve();
-          };
-
-          img.addEventListener('load', finish, { once: true });
-          img.addEventListener('error', finish, { once: true });
-          
-          // Fallback timeout in case image never fires load/error
-          setTimeout(finish, 5000);
-        })
-    )
-  );
-}
-
-function waitNextFrame() {
-  return new Promise((resolve) => {
-    // requestAnimationFrame could hang if the original tab is hidden. 
-    // We use setTimeout to ensure it reliably resolves even in inactive tabs.
-    setTimeout(() => resolve(), 100);
-  });
+  pdfMake.addVirtualFileSystem(pdfFonts);
+  pdfMake.setUrlAccessPolicy(() => false);
+  isPdfMakeConfigured = true;
 }
 
 /**
